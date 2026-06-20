@@ -85,7 +85,13 @@ export function Sidebar({ userEmail }: { userEmail?: string | null }) {
     <>
       {/* Mobile top bar with hamburger */}
       <div className="no-print sticky top-0 z-30 flex items-center justify-between border-b border-brand-800 bg-brand-900 px-4 py-2.5 text-white md:hidden">
-        <Logo size={40} variant="light" />
+        <div className="flex items-center gap-2">
+          <Logo size={36} variant="light" />
+          <div>
+            <p className="text-sm font-bold leading-tight">Erlangga</p>
+            <p className="text-[10px] font-medium text-brand-200">Rental Mobil</p>
+          </div>
+        </div>
         <button
           onClick={() => setMobileOpen(true)}
           aria-label="Buka menu"
