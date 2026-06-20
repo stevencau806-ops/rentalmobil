@@ -24,7 +24,7 @@ export function Nota({ booking, appName = "Erlangga Rental Mobil", phone }: Nota
           className="h-24 w-auto object-contain"
         />
         {phone && (
-          <p className="mt-2 text-sm text-slate-600">{phone}</p>
+          <p className="mt-2 text-sm text-slate-600">No. Telp: {phone}</p>
         )}
       </div>
 
