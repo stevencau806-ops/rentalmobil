@@ -190,7 +190,7 @@ export function Sidebar({ userEmail }: { userEmail?: string | null }) {
                   <p className="text-xs text-brand-300">Administrator</p>
                 </div>
               </div>
-              <LogoutButton className="mt-3 w-full justify-center rounded-lg border border-brand-700 py-2 text-sm text-brand-100 hover:bg-brand-800 hover:text-white" />
+              <LogoutButton className="mt-3 w-full justify-center rounded-lg bg-red-600/20 border border-red-500/50 py-2.5 text-sm font-medium text-red-200 hover:bg-red-600/40 hover:text-white" />
             </div>
           </div>
         </div>
@@ -250,7 +250,7 @@ function UserFooter({ userEmail }: { userEmail?: string | null }) {
           <p className="text-brand-300">Administrator</p>
         </div>
       </div>
-      <LogoutButton className="mt-3 w-full justify-center rounded-lg border border-brand-700 py-2 text-sm text-brand-100 hover:bg-brand-800 hover:text-white" />
+      <LogoutButton className="mt-3 w-full justify-center rounded-lg bg-red-600/20 border border-red-500/50 py-2.5 text-sm font-medium text-red-200 hover:bg-red-600/40 hover:text-white" />
     </div>
   );
 }
