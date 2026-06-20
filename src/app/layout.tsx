@@ -13,6 +13,10 @@ export const metadata: Metadata = {
   description:
     "Sistem pengelolaan usaha rental mobil — booking, pelanggan, pembayaran, dan laporan.",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export const viewport = {
