@@ -6,10 +6,15 @@ interface LogoProps {
   variant?: "light" | "dark";
 }
 
-/** Logo Erlangga Rental Mobil — custom logo image + wordmark. */
+/** Logo Erlangga Rental Mobil — custom logo image + wordmark.
+ *  variant="light"  → background biru, tampilkan logo PUTIH (filter brightness-0 invert).
+ *  variant="dark"   → background putih, tampilkan logo berwarna asli.
+ */
 export function Logo({ size = 36, showText = true, variant = "dark" }: LogoProps) {
   const textColor = variant === "light" ? "text-white" : "text-brand-900";
   const subColor = variant === "light" ? "text-brand-100" : "text-accent-600";
+  const logoClass =
+    variant === "light" ? "object-contain brightness-0 invert" : "object-contain";
 
   return (
     <div className="flex items-center gap-2">
@@ -18,7 +23,7 @@ export function Logo({ size = 36, showText = true, variant = "dark" }: LogoProps
         alt="Erlangga Rental Mobil"
         width={size}
         height={size}
-        className="object-contain"
+        className={logoClass}
         priority
       />
       {showText && (
