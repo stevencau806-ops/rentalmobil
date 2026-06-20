@@ -38,7 +38,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen flex-col bg-gradient-to-br from-brand-900 via-brand-800 to-brand-950 lg:flex-row">
       {/* Brand panel */}
       <div className="flex flex-1 flex-col justify-center px-8 py-12 text-white lg:px-16">
-        <Logo size={56} variant="light" />
+        <Logo size={120} variant="light" />
         <h1 className="mt-8 max-w-md text-3xl font-extrabold leading-tight sm:text-4xl">
           Kelola usaha rental mobil Anda jadi lebih mudah.
         </h1>
@@ -67,8 +67,8 @@ export default function LoginPage() {
       {/* Form panel */}
       <div className="flex flex-1 items-center justify-center bg-white px-4 py-10 sm:px-8 lg:rounded-l-3xl">
         <div className="w-full max-w-sm">
-          <div className="mb-8 text-center lg:hidden">
-            <Logo size={48} />
+          <div className="mb-8 flex justify-center lg:hidden">
+            <Logo size={96} />
           </div>
 
           <h2 className="text-2xl font-bold text-slate-900">Masuk ke Akun</h2>

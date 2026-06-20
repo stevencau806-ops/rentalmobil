@@ -82,8 +82,8 @@ export function Sidebar({ userEmail }: { userEmail?: string | null }) {
   return (
     <>
       {/* Mobile top bar with hamburger */}
-      <div className="no-print sticky top-0 z-30 flex items-center justify-between border-b border-brand-800 bg-brand-900 px-4 py-3 text-white md:hidden">
-        <Logo size={32} variant="light" />
+      <div className="no-print sticky top-0 z-30 flex items-center justify-between border-b border-brand-800 bg-brand-900 px-4 py-2.5 text-white md:hidden">
+        <Logo size={40} variant="light" />
         <button
           onClick={() => setMobileOpen(true)}
           aria-label="Buka menu"
@@ -103,7 +103,7 @@ export function Sidebar({ userEmail }: { userEmail?: string | null }) {
           <div className="absolute inset-0 bg-slate-900/50" onClick={() => setMobileOpen(false)} />
           <div className="absolute left-0 top-0 h-full w-72 max-w-[80%] overflow-y-auto bg-brand-900 text-white shadow-xl">
             <div className="flex items-center justify-between border-b border-brand-800 px-4 py-4">
-              <Logo size={36} variant="light" />
+              <Logo size={44} variant="light" />
               <button onClick={() => setMobileOpen(false)} className="rounded-md p-1 hover:bg-brand-800" aria-label="Tutup menu">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                   <line x1="18" y1="6" x2="6" y2="18" />
@@ -120,7 +120,7 @@ export function Sidebar({ userEmail }: { userEmail?: string | null }) {
       {/* Desktop sidebar */}
       <aside className="no-print fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-brand-900 text-white md:flex">
         <div className="border-b border-brand-800 px-5 py-5">
-          <Logo size={40} variant="light" />
+          <Logo size={140} variant="light" />
         </div>
         <NavList items={navItems} isActive={isActive} />
         <UserFooter userEmail={userEmail} />

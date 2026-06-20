@@ -17,7 +17,7 @@ export function Nota({ booking, appName = "Erlangga Rental Mobil" }: NotaProps) 
     <div className="bg-white p-6 text-slate-900" id="nota-print-area">
       {/* Header */}
       <div className="flex items-center justify-between border-b-2 border-brand-800 pb-4">
-        <Logo size={44} />
+        <Logo size={88} />
         <div className="text-right text-xs text-slate-500">
           <p className="font-semibold text-slate-800">{appName}</p>
           <p>www.erlangga-rental.id</p>
