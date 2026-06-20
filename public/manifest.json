@@ -1,0 +1,10 @@
+{
+  "name": "Erlangga Rental Mobil",
+  "short_name": "Erlangga Rental",
+  "description": "Sistem pengelolaan usaha rental mobil",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#1e3a8a",
+  "theme_color": "#1e3a8a",
+  "icons": []
+}
