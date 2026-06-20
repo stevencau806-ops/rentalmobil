@@ -5,7 +5,6 @@ import { Check } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
-import Image from "next/image";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -38,13 +37,11 @@ export default function LoginPage() {
     <div className="flex min-h-screen flex-col bg-gradient-to-br from-brand-900 via-brand-800 to-brand-950 lg:flex-row">
       {/* Brand panel */}
       <div className="flex flex-1 flex-col justify-center px-8 py-12 text-white lg:px-16">
-        <Image
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
           src="https://res.cloudinary.com/dqjh7utdb/image/upload/v1781959408/rcxemimskpt6mnzmbq3c.png"
           alt="Erlangga Rental Mobil"
-          width={180}
-          height={180}
-          className="object-contain brightness-0 invert"
-          unoptimized
+          className="max-w-xs brightness-0 invert"
         />
         <h1 className="mt-8 max-w-md text-3xl font-extrabold leading-tight sm:text-4xl">
           Kelola usaha rental mobil Anda jadi lebih mudah.
@@ -75,13 +72,11 @@ export default function LoginPage() {
       <div className="flex flex-1 items-center justify-center bg-white px-4 py-10 sm:px-8 lg:rounded-l-3xl">
         <div className="w-full max-w-sm">
           <div className="mb-8 flex justify-center lg:hidden">
-            <Image
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
               src="https://res.cloudinary.com/dqjh7utdb/image/upload/v1781959408/rcxemimskpt6mnzmbq3c.png"
               alt="Erlangga Rental Mobil"
-              width={120}
-              height={120}
-              className="object-contain"
-              unoptimized
+              className="max-w-[200px]"
             />
           </div>
 
