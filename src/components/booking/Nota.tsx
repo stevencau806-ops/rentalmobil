@@ -1,6 +1,5 @@
 import type { Booking } from "@/lib/types";
 import { formatRupiah, formatTanggal, formatTanggalWaktu } from "@/lib/utils";
-import { Logo } from "@/components/Logo";
 
 interface NotaProps {
   booking: Booking;
@@ -17,7 +16,12 @@ export function Nota({ booking, appName = "Erlangga Rental Mobil" }: NotaProps) 
     <div className="bg-white p-6 text-slate-900" id="nota-print-area">
       {/* Header */}
       <div className="flex items-center justify-between border-b-2 border-brand-800 pb-4">
-        <Logo size={88} />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="https://res.cloudinary.com/dqjh7utdb/image/upload/v1781966767/uejr869cpb9p7lxaa9ab.jpg"
+          alt="Erlangga Rental Mobil"
+          className="h-20 w-auto object-contain"
+        />
         <div className="text-right text-xs text-slate-500">
           <p className="font-semibold text-slate-800">{appName}</p>
           <p>www.erlangga-rental.id</p>
