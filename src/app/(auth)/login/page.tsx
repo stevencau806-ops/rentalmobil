@@ -41,8 +41,8 @@ export default function LoginPage() {
         <Image
           src="https://res.cloudinary.com/dqjh7utdb/image/upload/v1781959408/rcxemimskpt6mnzmbq3c.png"
           alt="Erlangga Rental Mobil"
-          width={120}
-          height={120}
+          width={180}
+          height={180}
           className="object-contain brightness-0 invert"
           unoptimized
         />
@@ -78,8 +78,8 @@ export default function LoginPage() {
             <Image
               src="https://res.cloudinary.com/dqjh7utdb/image/upload/v1781959408/rcxemimskpt6mnzmbq3c.png"
               alt="Erlangga Rental Mobil"
-              width={96}
-              height={96}
+              width={120}
+              height={120}
               className="object-contain"
               unoptimized
             />
