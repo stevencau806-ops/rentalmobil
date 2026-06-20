@@ -70,9 +70,24 @@ export function BookingClient({
   const [notaBooking, setNotaBooking] = useState<Booking | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const toast = useToast();
 
   const availableCars = cars.filter((c) => c.status === "available");
+
+  // Filter bookings by search query for mobile card view
+  const filteredBookings = useMemo(() => {
+    if (!searchQuery.trim()) return bookings;
+    const q = searchQuery.toLowerCase();
+    return bookings.filter(
+      (b) =>
+        (b.customers?.name ?? "").toLowerCase().includes(q) ||
+        (b.cars?.brand ?? "").toLowerCase().includes(q) ||
+        (b.cars?.model ?? "").toLowerCase().includes(q) ||
+        (b.cars?.plate ?? "").toLowerCase().includes(q) ||
+        (b.notes ?? "").toLowerCase().includes(q)
+    );
+  }, [bookings, searchQuery]);
 
   // Live total cost preview for new booking
   const costPreview = useMemo(() => {
@@ -313,15 +328,114 @@ export function BookingClient({
 
   return (
     <div>
-      <DataTable
-        columns={columns}
-        data={bookings}
-        rowKey={(b) => b.id}
-        searchKeys={["notes"]}
-        searchPlaceholder="Cari booking..."
-        emptyMessage="Belum ada booking. Klik 'Booking Baru' untuk memulai."
-        toolbar={<Button onClick={() => setNewOpen(true)}>+ Booking Baru</Button>}
-      />
+      {/* Search + toolbar */}
+      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="sm:max-w-xs sm:flex-1">
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Cari booking..."
+          />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => setNewOpen(true)}>+ Booking Baru</Button>
+        </div>
+      </div>
+
+      {/* Mobile card list */}
+      <div className="space-y-3 md:hidden">
+        {filteredBookings.length === 0 ? (
+          <div className="rounded-xl border border-slate-200 px-4 py-10 text-center text-sm text-slate-400">
+            Belum ada booking. Klik &apos;Booking Baru&apos; untuk memulai.
+          </div>
+        ) : (
+          filteredBookings.map((b) => (
+            <div key={b.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              {/* Header: customer + price */}
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-slate-900">
+                    {b.customers?.name ?? "-"}
+                  </p>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    {b.cars?.brand} {b.cars?.model} · {b.cars?.plate}
+                  </p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="text-sm font-bold text-slate-900">
+                    {formatRupiah(Number(b.total_cost) + Number(b.late_fee || 0))}
+                  </p>
+                  {Number(b.late_fee) > 0 && (
+                    <p className="text-[11px] text-red-600">+{formatRupiah(Number(b.late_fee))} denda</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Dates */}
+              <div className="mt-2 flex items-center gap-1.5 text-xs text-slate-500">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z" />
+                </svg>
+                <span>{formatTanggal(b.start_date)} → {formatTanggal(b.end_date)}</span>
+                <span className="text-slate-400">({b.duration_days} hari)</span>
+              </div>
+
+              {/* Status badges */}
+              <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                <button onClick={() => togglePayment(b)} title="Klik untuk ubah">
+                  <Badge tone={b.payment_status === "paid" ? "green" : "yellow"}>
+                    {paymentStatusLabel[b.payment_status]}
+                  </Badge>
+                </button>
+                {!b.actual_return_date && <Badge tone="blue">Sewa Aktif</Badge>}
+                {b.actual_return_date && b.fine_status === "pending" && (
+                  <button onClick={() => settleFine(b)}>
+                    <Badge tone="red">Denda: {fineStatusLabel[b.fine_status]}</Badge>
+                  </button>
+                )}
+                {b.actual_return_date && b.fine_status === "paid" && (
+                  <Badge tone="gray">Selesai</Badge>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3">
+                {!b.actual_return_date && (
+                  <Button size="sm" variant="outline" onClick={() => openReturn(b)} className="flex-1">
+                    Selesaikan
+                  </Button>
+                )}
+                <Button size="sm" variant="ghost" onClick={() => setNotaBooking(b)}>
+                  Nota
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-red-600 hover:bg-red-50"
+                  onClick={() => setDeleteId(b.id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ))
+        )}
+        <p className="text-xs text-slate-400">
+          Menampilkan {filteredBookings.length} dari {bookings.length} data
+        </p>
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden md:block">
+        <DataTable
+          columns={columns}
+          data={bookings}
+          rowKey={(b) => b.id}
+          searchKeys={["notes"]}
+          searchPlaceholder="Cari booking..."
+          emptyMessage="Belum ada booking. Klik 'Booking Baru' untuk memulai."
+        />
+      </div>
 
       {/* New Booking Modal */}
       <Modal open={newOpen} onClose={() => setNewOpen(false)} title="Booking Rental Baru" size="lg">

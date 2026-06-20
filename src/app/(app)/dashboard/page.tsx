@@ -110,20 +110,26 @@ export default async function DashboardPage() {
           ) : (
             <ul className="divide-y divide-slate-100">
               {recentBookings.map((b) => (
-                <li key={b.id} className="flex items-center justify-between gap-3 px-4 py-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-slate-900">
-                      {b.customers?.name ?? "Pelanggan"}
-                    </p>
-                    <p className="truncate text-xs text-slate-500">
-                      {b.cars?.brand} {b.cars?.model} · {b.cars?.plate} ·{" "}
+                <li key={b.id} className="px-4 py-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-slate-900">
+                        {b.customers?.name ?? "Pelanggan"}
+                      </p>
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        {b.cars?.brand} {b.cars?.model} · {b.cars?.plate}
+                      </p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <span className="text-sm font-semibold text-slate-900">
+                        {formatRupiah(Number(b.total_cost) + Number(b.late_fee || 0))}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-1.5 flex items-center justify-between">
+                    <p className="text-[11px] text-slate-400">
                       {formatTanggal(b.start_date)} → {formatTanggal(b.end_date)}
                     </p>
-                  </div>
-                  <div className="flex flex-col items-end gap-1">
-                    <span className="text-sm font-semibold text-slate-900">
-                      {formatRupiah(Number(b.total_cost) + Number(b.late_fee || 0))}
-                    </span>
                     <Badge tone={b.payment_status === "paid" ? "green" : "yellow"}>
                       {paymentStatusLabel[b.payment_status]}
                     </Badge>
