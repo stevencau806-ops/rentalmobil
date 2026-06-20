@@ -51,7 +51,7 @@ export default function LoginPage() {
         <img
           src="https://res.cloudinary.com/dqjh7utdb/image/upload/v1781964319/qbavk4vtgvvoqatema9c.png"
           alt="Erlangga Rental Mobil"
-          className="mb-4 w-64"
+          className="mb-4 w-64 md:w-96"
         />
 
         {/* Tagline */}
