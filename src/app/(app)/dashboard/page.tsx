@@ -7,6 +7,7 @@ import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { paymentStatusLabel } from "@/lib/utils";
+import { MobileMenuGrid } from "@/components/dashboard/MobileMenuGrid";
 
 export const dynamic = "force-dynamic";
 
@@ -44,8 +45,11 @@ export default async function DashboardPage() {
         }
       />
 
+      {/* Mobile menu grid - only visible on mobile */}
+      <MobileMenuGrid />
+
       {/* Stats grid */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:mt-0 sm:gap-4 lg:grid-cols-4">
         <StatCard
           label="Total Mobil"
           value={totalCars}
@@ -129,8 +133,8 @@ export default async function DashboardPage() {
         </CardBody>
       </Card>
 
-      {/* Quick links */}
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {/* Quick links - hidden on mobile since MobileMenuGrid replaces it */}
+      <div className="mt-6 hidden grid-cols-2 gap-3 md:grid sm:grid-cols-4">
         {[
           { href: "/mobil", label: "Data Mobil", icon: "🚗" },
           { href: "/pelanggan", label: "Pelanggan", icon: "👤" },
