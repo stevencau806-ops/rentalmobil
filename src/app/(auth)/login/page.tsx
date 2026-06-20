@@ -42,7 +42,7 @@ export default function LoginPage() {
         className="absolute inset-0 h-full w-full object-cover"
       />
       {/* Overlay for readability */}
-      <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px]" />
+      <div className="absolute inset-0 bg-white/50" />
 
       {/* Content */}
       <div className="relative z-10 flex w-full max-w-md flex-1 flex-col items-center justify-center px-6 py-10">
