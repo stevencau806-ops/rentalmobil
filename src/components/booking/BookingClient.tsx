@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Trash2, TriangleAlert, Check, Printer } from "lucide-react";
 import type { Booking, Car, Customer } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { DataTable } from "@/components/ui/DataTable";
@@ -301,7 +302,7 @@ export function BookingClient({
             className="text-red-600 hover:bg-red-50"
             onClick={() => setDeleteId(b.id)}
           >
-            ✕
+            <Trash2 className="h-4 w-4" />
           </Button>
         </div>
       ),
@@ -353,14 +354,15 @@ export function BookingClient({
               const bl = blacklistNiks.includes(c.nik);
               return (
                 <option key={c.id} value={c.id}>
-                  {c.name} · {c.nik}{bl ? " ⚠ BLACKLIST" : ""}
+                  {c.name} · {c.nik}{bl ? "  [BLACKLIST]" : ""}
                 </option>
               );
             })}
           </Select>
           {selectedCustomerBlacklisted && (
-            <div className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">
-              ⚠ PERINGATAN: Pelanggan ini terdaftar di BLACKLIST. Lanjutkan dengan sangat hati-hati.
+            <div className="flex items-start gap-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">
+              <TriangleAlert className="mt-px h-4 w-4 shrink-0" />
+              <span>PERINGATAN: Pelanggan ini terdaftar di BLACKLIST. Lanjutkan dengan sangat hati-hati.</span>
             </div>
           )}
 
@@ -465,7 +467,10 @@ export function BookingClient({
                       <p>Denda: {formatRupiah(fee)}</p>
                     </>
                   ) : (
-                    <p className="font-semibold">✓ Tepat waktu — tidak ada denda</p>
+                    <p className="flex items-center gap-1.5 font-semibold">
+                      <Check className="h-4 w-4 text-emerald-600" />
+                      Tepat waktu — tidak ada denda
+                    </p>
                   )}
                 </div>
               );
@@ -491,7 +496,12 @@ export function BookingClient({
             <Button variant="outline" onClick={() => setNotaBooking(null)}>
               Tutup
             </Button>
-            <Button onClick={() => window.print()}>🖨 Cetak / PDF</Button>
+            <Button onClick={() => window.print()}>
+              <span className="inline-flex items-center gap-1.5">
+                <Printer className="h-4 w-4" />
+                Cetak / PDF
+              </span>
+            </Button>
           </div>
         )}
       </Modal>

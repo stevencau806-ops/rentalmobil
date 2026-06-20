@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Settings as SettingsIcon, UserCircle, Lightbulb } from "lucide-react";
 import type { Settings } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
@@ -58,7 +59,12 @@ export function SettingsClient({ settings, admins, currentUserId }: SettingsClie
       {/* General settings */}
       <Card>
         <CardHeader>
-          <CardTitle>⚙️ Pengaturan Umum</CardTitle>
+          <CardTitle>
+            <span className="inline-flex items-center gap-2">
+              <SettingsIcon className="h-4 w-4 text-brand-600" />
+              Pengaturan Umum
+            </span>
+          </CardTitle>
         </CardHeader>
         <CardBody>
           <form onSubmit={handleSave} className="space-y-4">
@@ -87,7 +93,12 @@ export function SettingsClient({ settings, admins, currentUserId }: SettingsClie
       {/* Admin users */}
       <Card>
         <CardHeader>
-          <CardTitle>👤 Akun Admin ({admins.length}/3)</CardTitle>
+          <CardTitle>
+            <span className="inline-flex items-center gap-2">
+              <UserCircle className="h-4 w-4 text-brand-600" />
+              Akun Admin ({admins.length}/3)
+            </span>
+          </CardTitle>
         </CardHeader>
         <CardBody className="p-0">
           <ul className="divide-y divide-slate-100">
@@ -117,10 +128,13 @@ export function SettingsClient({ settings, admins, currentUserId }: SettingsClie
             )}
           </ul>
           <div className="border-t border-slate-100 px-4 py-3">
-            <p className="text-xs text-slate-500">
-              💡 Untuk menambah/menghapus admin, kelola langsung di{" "}
-              <span className="font-medium">Supabase Dashboard → Authentication → Users</span>.
-              Maksimal 3 akun sesuai paket.
+            <p className="flex items-start gap-1.5 text-xs text-slate-500">
+              <Lightbulb className="mt-px h-3.5 w-3.5 shrink-0 text-amber-500" />
+              <span>
+                Untuk menambah/menghapus admin, kelola langsung di{" "}
+                <span className="font-medium">Supabase Dashboard → Authentication → Users</span>.
+                Maksimal 3 akun sesuai paket.
+              </span>
             </p>
           </div>
         </CardBody>

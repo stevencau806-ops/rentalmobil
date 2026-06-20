@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { TriangleAlert } from "lucide-react";
 import type { Blacklist, Customer } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { DataTable } from "@/components/ui/DataTable";
@@ -187,8 +188,9 @@ export function BlacklistClient({ initialList, customers }: BlacklistClientProps
             onChange={(e) => setForm({ ...form, reason: e.target.value })}
             placeholder="Contoh: Tidak mengembalikan mobil, merusak kendaraan, dll."
           />
-          <div className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
-            ⚠ Pelanggan dengan NIK ini akan otomatis mendapat peringatan saat dibuat/diedit di halaman Data Pelanggan.
+          <div className="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+            <TriangleAlert className="mt-px h-4 w-4 shrink-0" />
+            <span>Pelanggan dengan NIK ini akan otomatis mendapat peringatan saat dibuat/diedit di halaman Data Pelanggan.</span>
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>

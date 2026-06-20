@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Check } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Logo } from "@/components/Logo";
@@ -53,7 +54,8 @@ export default function LoginPage() {
             "Laporan pendapatan bulanan & tahunan",
           ].map((item) => (
             <li key={item} className="flex items-center gap-2">
-              <span className="text-accent-400">✓</span> {item}
+              <Check className="h-4 w-4 text-accent-400" />
+              {item}
             </li>
           ))}
         </ul>

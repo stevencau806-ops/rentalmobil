@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Car as CarIcon } from "lucide-react";
 import type { Car, CarStatus } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { DataTable } from "@/components/ui/DataTable";
@@ -138,7 +139,7 @@ export function CarsClient({ initialCars }: CarsClientProps) {
       header: "Mobil",
       render: (c) => (
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100 text-xl">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100 text-slate-400">
             {c.photo_url ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -150,7 +151,7 @@ export function CarsClient({ initialCars }: CarsClientProps) {
                 }}
               />
             ) : (
-              "🚗"
+              <CarIcon className="h-6 w-6" />
             )}
           </div>
           <div className="min-w-0">

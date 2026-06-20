@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { TriangleAlert } from "lucide-react";
 import type { Customer } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { DataTable } from "@/components/ui/DataTable";
@@ -128,7 +129,12 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
           <div className="flex items-center gap-2">
             <span className="font-medium text-slate-900">{c.name}</span>
             {blacklisted && (
-              <Badge tone="red" title="NIK ini berada di blacklist">⚠ Blacklist</Badge>
+              <Badge tone="red" title="NIK ini berada di blacklist">
+                <span className="inline-flex items-center gap-1">
+                  <TriangleAlert className="h-3 w-3" />
+                  Blacklist
+                </span>
+              </Badge>
             )}
           </div>
         );
@@ -205,7 +211,7 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
             placeholder="16 digit NIK"
             error={
               nikWarned && isBlacklistedNow
-                ? "⚠ NIK ini terdaftar di BLACKLIST. Pelanggan bermasalah — lanjutkan dengan hati-hati."
+                ? "NIK ini terdaftar di BLACKLIST. Pelanggan bermasalah — lanjutkan dengan hati-hati."
                 : undefined
             }
           />
