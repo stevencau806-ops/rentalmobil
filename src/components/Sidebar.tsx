@@ -6,6 +6,8 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { Logo } from "./Logo";
 
+import { LogoutButton } from "./LogoutButton";
+
 interface NavItem {
   href: string;
   label: string;
@@ -166,10 +168,11 @@ function UserFooter({ userEmail }: { userEmail?: string | null }) {
         <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-700 text-sm font-semibold text-white">
           {(userEmail?.[0] ?? "A").toUpperCase()}
         </span>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="truncate text-white">{userEmail ?? "admin"}</p>
           <p className="text-brand-300">Administrator</p>
         </div>
+        <LogoutButton className="text-brand-200 hover:bg-brand-800 hover:text-white" />
       </div>
     </div>
   );

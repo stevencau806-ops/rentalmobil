@@ -6,7 +6,6 @@ import { StatCard } from "@/components/ui/StatCard";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { LogoutButton } from "@/components/LogoutButton";
 import { paymentStatusLabel } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -39,12 +38,9 @@ export default async function DashboardPage() {
         title="Dashboard"
         description={`Ringkasan operasional · ${formatTanggal(now.toISOString())}`}
         action={
-          <div className="flex items-center gap-2">
-            <LogoutButton className="text-red-600 hover:bg-red-50 hover:text-red-700" />
-            <Link href="/booking">
-              <Button>+ Booking Baru</Button>
-            </Link>
-          </div>
+          <Link href="/booking">
+            <Button>+ Booking Baru</Button>
+          </Link>
         }
       />
 
