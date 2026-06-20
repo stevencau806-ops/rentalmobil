@@ -18,7 +18,7 @@ export function Nota({ booking, appName = "Erlangga Rental Mobil" }: NotaProps) 
       <div className="flex items-center justify-between border-b-2 border-brand-800 pb-4">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="https://res.cloudinary.com/dqjh7utdb/image/upload/v1781966767/uejr869cpb9p7lxaa9ab.jpg"
+          src="https://res.cloudinary.com/ddbq1mlsc/image/upload/q_auto/f_auto/v1781939955/file_000000008998722f9c5563316a3e96b9-removebg-preview_mem3ze.png"
           alt="Erlangga Rental Mobil"
           className="h-20 w-auto object-contain"
         />
