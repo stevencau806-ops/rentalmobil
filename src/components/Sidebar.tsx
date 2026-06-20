@@ -120,7 +120,7 @@ export function Sidebar({ userEmail }: { userEmail?: string | null }) {
       {/* Desktop sidebar */}
       <aside className="no-print fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-brand-900 text-white md:flex">
         <div className="border-b border-brand-800 px-5 py-5">
-          <Logo size={140} variant="light" />
+          <Logo size={60} variant="light" showText />
         </div>
         <NavList items={navItems} isActive={isActive} />
         <UserFooter userEmail={userEmail} />
