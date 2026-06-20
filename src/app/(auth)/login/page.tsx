@@ -46,12 +46,12 @@ export default function LoginPage() {
 
       {/* Content */}
       <div className="relative z-10 flex w-full max-w-md flex-1 flex-col items-center justify-center px-6 py-10">
-        {/* Logo */}
+        {/* Car image as logo/header */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="https://res.cloudinary.com/dqjh7utdb/image/upload/v1781959408/rcxemimskpt6mnzmbq3c.png"
+          src="https://res.cloudinary.com/dqjh7utdb/image/upload/v1781964319/qbavk4vtgvvoqatema9c.png"
           alt="Erlangga Rental Mobil"
-          className="mb-2 w-48"
+          className="mb-4 w-64"
         />
 
         {/* Tagline */}
@@ -164,16 +164,6 @@ export default function LoginPage() {
           </svg>
           Login sebagai Tamu
         </button>
-      </div>
-
-      {/* Car image at bottom */}
-      <div className="relative z-10 w-full">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="https://res.cloudinary.com/dqjh7utdb/image/upload/v1781964319/qbavk4vtgvvoqatema9c.png"
-          alt="Mobil"
-          className="w-full object-contain"
-        />
       </div>
 
       {/* Footer text */}
