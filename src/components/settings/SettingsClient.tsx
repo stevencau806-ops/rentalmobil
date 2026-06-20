@@ -26,6 +26,7 @@ interface SettingsClientProps {
 
 export function SettingsClient({ settings, admins, currentUserId }: SettingsClientProps) {
   const [appName, setAppName] = useState(settings?.app_name ?? "Erlangga Rental Mobil");
+  const [phone, setPhone] = useState(settings?.phone ?? "");
   const [finePerHour, setFinePerHour] = useState(settings?.fine_per_hour?.toString() ?? "25000");
   const [saving, setSaving] = useState(false);
   const toast = useToast();
@@ -36,6 +37,7 @@ export function SettingsClient({ settings, admins, currentUserId }: SettingsClie
     const supabase = createClient();
     const payload = {
       app_name: appName.trim(),
+      phone: phone.trim() || null,
       fine_per_hour: Number(finePerHour) || 0,
     };
 
@@ -73,6 +75,12 @@ export function SettingsClient({ settings, admins, currentUserId }: SettingsClie
               value={appName}
               onChange={(e) => setAppName(e.target.value)}
               placeholder="Erlangga Rental Mobil"
+            />
+            <Input
+              label="No. Telepon (untuk Nota)"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="0812-0000-0000"
             />
             <Input
               label="Denda per Jam Keterlambatan (Rp)"

@@ -72,6 +72,7 @@ export interface Settings {
   id: string;
   fine_per_hour: number;
   app_name: string;
+  phone: string | null;
 }
 
 // Form input types (no id, no timestamps)

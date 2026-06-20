@@ -4,10 +4,11 @@ import { formatRupiah, formatTanggal, formatTanggalWaktu } from "@/lib/utils";
 interface NotaProps {
   booking: Booking;
   appName?: string;
+  phone?: string | null;
 }
 
 /** Print-ready receipt/invoice view. Used inside a modal. */
-export function Nota({ booking, appName = "Erlangga Rental Mobil" }: NotaProps) {
+export function Nota({ booking, appName = "Erlangga Rental Mobil", phone }: NotaProps) {
   const subtotal = Number(booking.total_cost);
   const lateFee = Number(booking.late_fee || 0);
   const total = subtotal + lateFee;
@@ -15,18 +16,16 @@ export function Nota({ booking, appName = "Erlangga Rental Mobil" }: NotaProps) 
   return (
     <div className="bg-white p-6 text-slate-900" id="nota-print-area">
       {/* Header */}
-      <div className="flex items-center justify-between border-b-2 border-brand-800 pb-4">
+      <div className="flex flex-col items-center border-b-2 border-brand-800 pb-4">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="https://res.cloudinary.com/ddbq1mlsc/image/upload/q_auto/f_auto/v1781968644/erlangga-logo-sidebar_faalnu.png"
           alt="Erlangga Rental Mobil"
-          className="h-20 w-auto object-contain"
+          className="h-24 w-auto object-contain"
         />
-        <div className="text-right text-xs text-slate-500">
-          <p className="font-semibold text-slate-800">{appName}</p>
-          <p>www.erlangga-rental.id</p>
-          <p>0812-0000-0000</p>
-        </div>
+        {phone && (
+          <p className="mt-2 text-sm text-slate-600">{phone}</p>
+        )}
       </div>
 
       <div className="mt-4 flex items-center justify-between">

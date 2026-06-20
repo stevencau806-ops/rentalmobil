@@ -26,6 +26,7 @@ export default async function BookingPage() {
         cars={cars}
         customers={customers}
         finePerHour={finePerHour}
+        phone={settings?.phone ?? null}
         blacklistNiks={blacklist.map((b) => b.nik)}
       />
     </div>
