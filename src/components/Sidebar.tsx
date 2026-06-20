@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import { Logo } from "./Logo";
-
 import { LogoutButton } from "./LogoutButton";
 
 interface NavItem {
@@ -77,6 +76,29 @@ function Icon({ path }: { path: string }) {
 export function Sidebar({ userEmail }: { userEmail?: string | null }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [drawerVisible, setDrawerVisible] = useState(false);
+
+  // Animate drawer in
+  useEffect(() => {
+    if (mobileOpen) {
+      // Small delay to trigger CSS transition
+      requestAnimationFrame(() => setDrawerVisible(true));
+    }
+  }, [mobileOpen]);
+
+  function closeDrawer() {
+    setDrawerVisible(false);
+    // Wait for animation to finish before unmounting
+    setTimeout(() => setMobileOpen(false), 300);
+  }
+
+  // Close drawer on navigation (route change)
+  useEffect(() => {
+    if (mobileOpen) {
+      closeDrawer();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`);
@@ -105,22 +127,71 @@ export function Sidebar({ userEmail }: { userEmail?: string | null }) {
         </button>
       </div>
 
-      {/* Mobile overlay drawer */}
+      {/* Mobile drawer overlay */}
       {mobileOpen && (
         <div className="no-print fixed inset-0 z-50 md:hidden">
-          <div className="absolute inset-0 bg-slate-900/50" onClick={() => setMobileOpen(false)} />
-          <div className="absolute left-0 top-0 h-full w-72 max-w-[80%] overflow-y-auto bg-brand-900 text-white shadow-xl">
+          {/* Backdrop */}
+          <div
+            className={`absolute inset-0 bg-black/50 transition-opacity duration-300 ${
+              drawerVisible ? "opacity-100" : "opacity-0"
+            }`}
+            onClick={closeDrawer}
+          />
+          {/* Drawer panel */}
+          <div
+            className={`absolute left-0 top-0 flex h-full w-72 max-w-[80%] flex-col bg-brand-900 text-white shadow-2xl transition-transform duration-300 ease-in-out ${
+              drawerVisible ? "translate-x-0" : "-translate-x-full"
+            }`}
+          >
+            {/* Drawer header */}
             <div className="flex items-center justify-between border-b border-brand-800 px-4 py-4">
-              <Logo size={44} variant="light" />
-              <button onClick={() => setMobileOpen(false)} className="rounded-md p-1 hover:bg-brand-800" aria-label="Tutup menu">
+              <div className="flex items-center gap-2">
+                <Logo size={40} variant="light" />
+                <div>
+                  <p className="text-base font-bold leading-tight">Erlangga</p>
+                  <p className="text-xs font-medium text-brand-200">Rental Mobil</p>
+                </div>
+              </div>
+              <button onClick={closeDrawer} className="rounded-md p-1.5 hover:bg-brand-800" aria-label="Tutup menu">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                   <line x1="18" y1="6" x2="6" y2="18" />
                   <line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
               </button>
             </div>
-            <NavList items={navItems} isActive={isActive} onNavigate={() => setMobileOpen(false)} />
-            <UserFooter userEmail={userEmail} />
+
+            {/* Navigation */}
+            <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+              {navItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={closeDrawer}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                    isActive(item.href)
+                      ? "bg-brand-700 text-white shadow-sm"
+                      : "text-brand-100 hover:bg-brand-800 hover:text-white"
+                  }`}
+                >
+                  <span className="shrink-0">{item.icon}</span>
+                  <span>{item.label}</span>
+                </Link>
+              ))}
+            </nav>
+
+            {/* User footer with logout */}
+            <div className="border-t border-brand-800 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-700 text-sm font-semibold text-white">
+                  {(userEmail?.[0] ?? "A").toUpperCase()}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm text-white">{userEmail ?? "admin"}</p>
+                  <p className="text-xs text-brand-300">Administrator</p>
+                </div>
+              </div>
+              <LogoutButton className="mt-3 w-full justify-center rounded-lg border border-brand-700 py-2 text-sm text-brand-100 hover:bg-brand-800 hover:text-white" />
+            </div>
           </div>
         </div>
       )}
@@ -160,7 +231,7 @@ function NavList({
           }`}
         >
           <span className="shrink-0">{item.icon}</span>
-          {item.label}
+          <span>{item.label}</span>
         </Link>
       ))}
     </nav>
@@ -171,15 +242,15 @@ function UserFooter({ userEmail }: { userEmail?: string | null }) {
   return (
     <div className="border-t border-brand-800 px-4 py-3">
       <div className="flex items-center gap-2 text-xs text-brand-200">
-        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-700 text-sm font-semibold text-white">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-700 text-sm font-semibold text-white">
           {(userEmail?.[0] ?? "A").toUpperCase()}
         </span>
         <div className="min-w-0 flex-1">
           <p className="truncate text-white">{userEmail ?? "admin"}</p>
           <p className="text-brand-300">Administrator</p>
         </div>
-        <LogoutButton className="text-brand-200 hover:bg-brand-800 hover:text-white" />
       </div>
+      <LogoutButton className="mt-3 w-full justify-center rounded-lg border border-brand-700 py-2 text-sm text-brand-100 hover:bg-brand-800 hover:text-white" />
     </div>
   );
 }
