@@ -16,12 +16,13 @@ export function Logo({ size = 40, variant = "dark" }: LogoProps) {
 
   return (
     <Image
-      src="/logo.png"
+      src="https://res.cloudinary.com/dqjh7utdb/image/upload/v1781959408/rcxemimskpt6mnzmbq3c.png"
       alt="Erlangga Rental Mobil"
       width={size}
       height={size}
       className={`object-contain ${logoClass}`}
       priority
+      unoptimized
     />
   );
 }
