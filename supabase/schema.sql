@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS public.admins (
 CREATE TABLE IF NOT EXISTS public.settings (
   id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   app_name      text NOT NULL DEFAULT 'Erlangga Rental Mobil',
+  phone         text,
   fine_per_hour numeric NOT NULL DEFAULT 25000,
   created_at    timestamptz NOT NULL DEFAULT now()
 );
