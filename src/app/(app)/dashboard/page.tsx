@@ -45,11 +45,8 @@ export default async function DashboardPage() {
         }
       />
 
-      {/* Mobile menu grid - only visible on mobile */}
-      <MobileMenuGrid />
-
-      {/* Stats grid */}
-      <div className="mt-4 grid grid-cols-2 gap-3 sm:mt-0 sm:gap-4 lg:grid-cols-4">
+      {/* Stats grid - colorful on mobile */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <StatCard
           label="Total Mobil"
           value={totalCars}
@@ -76,7 +73,7 @@ export default async function DashboardPage() {
         />
       </div>
 
-      <div className="mt-4">
+      <div className="mt-3 sm:mt-4">
         <StatCard
           label="Pendapatan Bulan Ini"
           value={formatRupiah(monthRevenue)}
@@ -86,6 +83,11 @@ export default async function DashboardPage() {
             (b) => b.payment_status === "paid" && new Date(b.created_at) >= monthStart
           ).length} transaksi lunas`}
         />
+      </div>
+
+      {/* Mobile menu grid - only visible on mobile */}
+      <div className="mt-5">
+        <MobileMenuGrid />
       </div>
 
       {/* Recent bookings */}
