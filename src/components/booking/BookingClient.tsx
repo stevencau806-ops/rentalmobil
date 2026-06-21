@@ -30,6 +30,8 @@ interface BookingClientProps {
   finePerHour: number;
   phone: string | null;
   blacklistNiks: string[];
+  notaTerms: string | null;
+  notaSignatures: string | null;
 }
 
 interface NewBookingForm {
@@ -51,6 +53,8 @@ export function BookingClient({
   finePerHour,
   phone,
   blacklistNiks,
+  notaTerms,
+  notaSignatures,
 }: BookingClientProps) {
   const [bookings, setBookings] = useState<Booking[]>(initialBookings);
   const [newOpen, setNewOpen] = useState(false);
@@ -606,7 +610,7 @@ export function BookingClient({
 
       {/* Nota Modal */}
       <Modal open={!!notaBooking} onClose={() => setNotaBooking(null)} title="Nota Sewa" size="lg">
-        {notaBooking && <Nota booking={notaBooking} phone={phone} />}
+        {notaBooking && <Nota booking={notaBooking} phone={phone} notaTerms={notaTerms} notaSignatures={notaSignatures} />}
         {notaBooking && (
           <div className="mt-4 flex justify-end gap-2 no-print">
             <Button variant="outline" onClick={() => setNotaBooking(null)}>

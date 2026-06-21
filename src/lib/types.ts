@@ -73,6 +73,8 @@ export interface Settings {
   fine_per_hour: number;
   app_name: string;
   phone: string | null;
+  nota_terms: string | null; // JSON array of strings
+  nota_signatures: string | null; // JSON: { left: string, right: string }
 }
 
 // Form input types (no id, no timestamps)

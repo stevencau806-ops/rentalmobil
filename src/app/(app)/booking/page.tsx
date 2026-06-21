@@ -28,6 +28,8 @@ export default async function BookingPage() {
         finePerHour={finePerHour}
         phone={settings?.phone ?? null}
         blacklistNiks={blacklist.map((b) => b.nik)}
+        notaTerms={settings?.nota_terms ?? null}
+        notaSignatures={settings?.nota_signatures ?? null}
       />
     </div>
   );

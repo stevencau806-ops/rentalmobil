@@ -1,16 +1,30 @@
 "use client";
 
 import { useState } from "react";
-import { Settings as SettingsIcon, UserCircle, Lightbulb } from "lucide-react";
+import { Settings as SettingsIcon, UserCircle, Lightbulb, FileText, PenLine, Plus, Trash2, GripVertical } from "lucide-react";
 import type { Settings } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
-import { Input } from "@/components/ui/Input";
+import { Input, Textarea } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { useToast } from "@/components/ui/Toast";
 import { formatRupiah } from "@/lib/utils";
 import { LogoutButton } from "@/components/LogoutButton";
+
+const DEFAULT_TERMS = [
+  "Kendaraan (Mobil) yang disewakan tidak dapat dipindah tangankan kepada pihak lain/ketiga tanpa seizin pemilik kendaraan.",
+  "Kendaraan (Mobil) tidak dapat dijadikan jaminan/digadaikan dengan tujuan kepada siapapun.",
+  "Pelanggaran no 1 & no 2 akan diproses melalui jalur hukum.",
+  "Perubahan rute wajib konfirmasi ke pemilik mobil.",
+  "Bersedia mengembalikan kendaraan (Mobil) seperti saat diambil.",
+  "Bersedia mengembalikan bahan bakar sesuai balok seperti saat diambil.",
+  "Kerusakan, body lecet dan kecelakaan kendaraan (Mobil) dalam masa pinjaman ditanggung penyewa.",
+  "Dilarang membawa atau untuk bertransaksi barang haram/narkoba selama masa pinjaman kendaraan (Mobil).",
+  "Denda keterlambatan Rp40.000/jam.",
+];
+
+const DEFAULT_SIGNATURES = { left: "Penyewa", right: "Pemilik" };
 
 interface AdminInfo {
   id: string;
@@ -24,11 +38,42 @@ interface SettingsClientProps {
   currentUserId: string;
 }
 
+function parseTerms(raw: string | null | undefined): string[] {
+  if (!raw) return DEFAULT_TERMS;
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    return DEFAULT_TERMS;
+  } catch {
+    return DEFAULT_TERMS;
+  }
+}
+
+function parseSignatures(raw: string | null | undefined): { left: string; right: string } {
+  if (!raw) return DEFAULT_SIGNATURES;
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed.left === "string") return parsed;
+    return DEFAULT_SIGNATURES;
+  } catch {
+    return DEFAULT_SIGNATURES;
+  }
+}
+
 export function SettingsClient({ settings, admins, currentUserId }: SettingsClientProps) {
   const [appName, setAppName] = useState(settings?.app_name ?? "Erlangga Rental Mobil");
   const [phone, setPhone] = useState(settings?.phone ?? "");
   const [finePerHour, setFinePerHour] = useState(settings?.fine_per_hour?.toString() ?? "25000");
   const [saving, setSaving] = useState(false);
+
+  // Nota terms
+  const [terms, setTerms] = useState<string[]>(parseTerms(settings?.nota_terms));
+  const [savingTerms, setSavingTerms] = useState(false);
+
+  // Nota signatures
+  const [signatures, setSignatures] = useState(parseSignatures(settings?.nota_signatures));
+  const [savingSignatures, setSavingSignatures] = useState(false);
+
   const toast = useToast();
 
   async function handleSave(e: React.FormEvent) {
@@ -54,6 +99,72 @@ export function SettingsClient({ settings, admins, currentUserId }: SettingsClie
       return;
     }
     toast("Pengaturan disimpan", "success");
+  }
+
+  async function handleSaveTerms(e: React.FormEvent) {
+    e.preventDefault();
+    const filtered = terms.filter((t) => t.trim() !== "");
+    if (filtered.length === 0) {
+      toast("Minimal 1 pasal harus diisi", "error");
+      return;
+    }
+    setSavingTerms(true);
+    const supabase = createClient();
+    const payload = { nota_terms: JSON.stringify(filtered) };
+
+    let error;
+    if (settings?.id) {
+      ({ error } = await supabase.from("settings").update(payload).eq("id", settings.id));
+    } else {
+      ({ error } = await supabase.from("settings").insert({ ...payload, app_name: appName, fine_per_hour: Number(finePerHour) || 0 }));
+    }
+
+    setSavingTerms(false);
+    if (error) {
+      toast(`Gagal: ${error.message}`, "error");
+      return;
+    }
+    setTerms(filtered);
+    toast("Pasal nota disimpan", "success");
+  }
+
+  async function handleSaveSignatures(e: React.FormEvent) {
+    e.preventDefault();
+    if (!signatures.left.trim() || !signatures.right.trim()) {
+      toast("Nama pihak TTD tidak boleh kosong", "error");
+      return;
+    }
+    setSavingSignatures(true);
+    const supabase = createClient();
+    const payload = { nota_signatures: JSON.stringify(signatures) };
+
+    let error;
+    if (settings?.id) {
+      ({ error } = await supabase.from("settings").update(payload).eq("id", settings.id));
+    } else {
+      ({ error } = await supabase.from("settings").insert({ ...payload, app_name: appName, fine_per_hour: Number(finePerHour) || 0 }));
+    }
+
+    setSavingSignatures(false);
+    if (error) {
+      toast(`Gagal: ${error.message}`, "error");
+      return;
+    }
+    toast("TTD nota disimpan", "success");
+  }
+
+  function updateTerm(index: number, value: string) {
+    const updated = [...terms];
+    updated[index] = value;
+    setTerms(updated);
+  }
+
+  function removeTerm(index: number) {
+    setTerms(terms.filter((_, i) => i !== index));
+  }
+
+  function addTerm() {
+    setTerms([...terms, ""]);
   }
 
   return (
@@ -92,6 +203,110 @@ export function SettingsClient({ settings, admins, currentUserId }: SettingsClie
             <div className="flex justify-end">
               <Button type="submit" disabled={saving}>
                 {saving ? "Menyimpan..." : "Simpan Pengaturan"}
+              </Button>
+            </div>
+          </form>
+        </CardBody>
+      </Card>
+
+      {/* Nota Terms / Pasal */}
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <span className="inline-flex items-center gap-2">
+              <FileText className="h-4 w-4 text-brand-600" />
+              Pasal / Ketentuan Nota
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardBody>
+          <form onSubmit={handleSaveTerms} className="space-y-3">
+            <p className="text-xs text-slate-500">
+              Edit pasal-pasal yang tampil di nota sewa. Urutannya sesuai nomor.
+            </p>
+            {terms.map((term, i) => (
+              <div key={i} className="flex items-start gap-2">
+                <span className="mt-2.5 flex h-5 w-5 shrink-0 items-center justify-center rounded bg-slate-100 text-[10px] font-bold text-slate-500">
+                  {i + 1}
+                </span>
+                <Textarea
+                  rows={2}
+                  value={term}
+                  onChange={(e) => updateTerm(i, e.target.value)}
+                  placeholder={`Pasal ${i + 1}...`}
+                  className="flex-1 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeTerm(i)}
+                  className="mt-2 rounded p-1.5 text-red-500 hover:bg-red-50"
+                  title="Hapus pasal"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+            <Button type="button" variant="outline" size="sm" onClick={addTerm}>
+              <span className="inline-flex items-center gap-1">
+                <Plus className="h-3.5 w-3.5" />
+                Tambah Pasal
+              </span>
+            </Button>
+            <div className="flex justify-end pt-2">
+              <Button type="submit" disabled={savingTerms}>
+                {savingTerms ? "Menyimpan..." : "Simpan Pasal"}
+              </Button>
+            </div>
+          </form>
+        </CardBody>
+      </Card>
+
+      {/* Nota Signatures / TTD */}
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <span className="inline-flex items-center gap-2">
+              <PenLine className="h-4 w-4 text-brand-600" />
+              Tanda Tangan Nota
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardBody>
+          <form onSubmit={handleSaveSignatures} className="space-y-4">
+            <p className="text-xs text-slate-500">
+              Nama pihak yang tanda tangan di nota (kiri = penyewa, kanan = pemilik/rental).
+            </p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Input
+                label="Pihak Kiri (Penyewa)"
+                value={signatures.left}
+                onChange={(e) => setSignatures({ ...signatures, left: e.target.value })}
+                placeholder="Penyewa"
+              />
+              <Input
+                label="Pihak Kanan (Pemilik)"
+                value={signatures.right}
+                onChange={(e) => setSignatures({ ...signatures, right: e.target.value })}
+                placeholder="Pemilik"
+              />
+            </div>
+            {/* Preview */}
+            <div className="rounded-lg border border-dashed border-slate-300 p-4">
+              <p className="mb-3 text-center text-[10px] font-semibold uppercase text-slate-400">Preview TTD</p>
+              <div className="flex justify-between px-8">
+                <div className="text-center">
+                  <div className="mb-10 text-xs text-slate-500">{signatures.left || "Penyewa"}</div>
+                  <div className="border-b border-slate-400 w-28" />
+                </div>
+                <div className="text-center">
+                  <div className="mb-10 text-xs text-slate-500">{signatures.right || "Pemilik"}</div>
+                  <div className="border-b border-slate-400 w-28" />
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <Button type="submit" disabled={savingSignatures}>
+                {savingSignatures ? "Menyimpan..." : "Simpan TTD"}
               </Button>
             </div>
           </form>
