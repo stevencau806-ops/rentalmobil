@@ -161,7 +161,7 @@ export function Sidebar({ userEmail }: { userEmail?: string | null }) {
             </div>
 
             {/* Navigation */}
-            <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+            <nav className="flex-1 space-y-1 px-3 py-4">
               {navItems.map((item) => (
                 <Link
                   key={item.href}
@@ -198,8 +198,8 @@ export function Sidebar({ userEmail }: { userEmail?: string | null }) {
 
       {/* Desktop sidebar */}
       <aside className="no-print fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-brand-900 text-white md:flex">
-        <div className="border-b border-brand-800 px-5 py-5">
-          <Logo size={60} variant="light" showText />
+        <div className="border-b border-brand-800 px-5 py-4">
+          <Logo size={50} variant="light" showText />
         </div>
         <NavList items={navItems} isActive={isActive} />
         <UserFooter userEmail={userEmail} />
@@ -218,13 +218,13 @@ function NavList({
   onNavigate?: () => void;
 }) {
   return (
-    <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+    <nav className="flex-1 space-y-0.5 px-3 py-3">
       {items.map((item) => (
         <Link
           key={item.href}
           href={item.href}
           onClick={onNavigate}
-          className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+          className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
             isActive(item.href)
               ? "bg-brand-700 text-white shadow-sm"
               : "text-brand-100 hover:bg-brand-800 hover:text-white"
@@ -240,9 +240,9 @@ function NavList({
 
 function UserFooter({ userEmail }: { userEmail?: string | null }) {
   return (
-    <div className="border-t border-brand-800 px-4 py-3">
+    <div className="border-t border-brand-800 px-4 py-2.5">
       <div className="flex items-center gap-2 text-xs text-brand-200">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-700 text-sm font-semibold text-white">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-700 text-sm font-semibold text-white">
           {(userEmail?.[0] ?? "A").toUpperCase()}
         </span>
         <div className="min-w-0 flex-1">
@@ -250,7 +250,7 @@ function UserFooter({ userEmail }: { userEmail?: string | null }) {
           <p className="text-brand-300">Administrator</p>
         </div>
       </div>
-      <LogoutButton className="mt-3 w-full justify-center rounded-lg bg-brand-800 py-2.5 text-sm font-medium text-white" />
+      <LogoutButton className="mt-2 w-full justify-center rounded-lg bg-brand-800 py-2 text-sm font-medium text-white" />
     </div>
   );
 }
