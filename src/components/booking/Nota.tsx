@@ -130,6 +130,24 @@ export function Nota({ booking, appName = "Erlangga Rental Mobil", phone }: Nota
         </div>
       )}
 
+      {/* Ketentuan Sewa */}
+      <div className="mt-5 rounded-lg border border-slate-200 p-4">
+        <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-700">
+          Ketentuan Sewa
+        </p>
+        <ol className="list-decimal space-y-1 pl-4 text-[11px] leading-relaxed text-slate-600">
+          <li>Kendaraan (Mobil) yang disewakan tidak dapat dipindah tangankan kepada pihak lain/ketiga tanpa seizin pemilik kendaraan.</li>
+          <li>Kendaraan (Mobil) tidak dapat dijadikan jaminan/digadaikan dengan tujuan kepada siapapun.</li>
+          <li>Pelanggaran no 1 &amp; no 2 akan diproses melalui jalur hukum.</li>
+          <li>Perubahan rute wajib konfirmasi ke pemilik mobil.</li>
+          <li>Bersedia mengembalikan kendaraan (Mobil) seperti saat diambil.</li>
+          <li>Bersedia mengembalikan bahan bakar sesuai balok seperti saat diambil.</li>
+          <li>Kerusakan, body lecet dan kecelakaan kendaraan (Mobil) dalam masa pinjaman ditanggung penyewa.</li>
+          <li>Dilarang membawa atau untuk bertransaksi barang haram/narkoba selama masa pinjaman kendaraan (Mobil).</li>
+          <li>Denda keterlambatan Rp40.000/jam.</li>
+        </ol>
+      </div>
+
       <div className="mt-6 border-t border-slate-200 pt-4 text-center text-xs text-slate-400">
         <p>Terima kasih telah menyewa di {appName}.</p>
         <p className="mt-1">Simpan nota ini sebagai bukti transaksi.</p>
