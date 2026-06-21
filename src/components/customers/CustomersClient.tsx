@@ -68,12 +68,20 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    // Validate NIK must be exactly 16 digits
+    const nikClean = form.nik.replace(/\D/g, "");
+    if (nikClean.length !== 16) {
+      toast("NIK harus 16 digit angka", "error");
+      return;
+    }
+
     setSaving(true);
     const supabase = createClient();
 
     const payload = {
       name: form.name.trim(),
-      nik: form.nik.trim(),
+      nik: nikClean,
       phone: form.phone.trim() || null,
       address: form.address.trim() || null,
       ktp_url: form.ktp_url.trim() || null,
@@ -200,18 +208,24 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
             placeholder="Budi Santoso"
           />
           <Input
-            label="NIK"
+            label="NIK (KTP)"
             required
             value={form.nik}
             onChange={(e) => {
-              setForm({ ...form, nik: e.target.value });
+              const val = e.target.value.replace(/\D/g, "").slice(0, 16);
+              setForm({ ...form, nik: val });
               setNikWarned(false);
             }}
             onBlur={() => setNikWarned(true)}
-            placeholder="16 digit NIK"
+            placeholder="3201234567890001"
+            inputMode="numeric"
+            maxLength={16}
+            hint={`${form.nik.replace(/\D/g, "").length}/16 digit`}
             error={
               nikWarned && isBlacklistedNow
                 ? "NIK ini terdaftar di BLACKLIST. Pelanggan bermasalah — lanjutkan dengan hati-hati."
+                : nikWarned && form.nik.length > 0 && form.nik.length < 16
+                ? "NIK harus 16 digit"
                 : undefined
             }
           />
