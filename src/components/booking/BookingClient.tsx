@@ -612,7 +612,7 @@ export function BookingClient({
 
       {/* Nota Modal */}
       <Modal open={!!notaBooking} onClose={() => setNotaBooking(null)} title="Nota Sewa" size="lg">
-        {notaBooking && <Nota booking={notaBooking} phone={phone} notaTerms={notaTerms} notaSignatures={notaSignatures} qrisUrl={qrisUrl} />}
+        {notaBooking && <Nota booking={notaBooking} phone={phone} notaTerms={notaTerms} notaSignatures={notaSignatures} />}
         {notaBooking && (
           <div className="mt-4 flex justify-end gap-2 no-print">
             <Button variant="outline" onClick={() => setNotaBooking(null)}>

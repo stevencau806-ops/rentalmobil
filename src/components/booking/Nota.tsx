@@ -21,7 +21,6 @@ interface NotaProps {
   phone?: string | null;
   notaTerms?: string | null;
   notaSignatures?: string | null;
-  qrisUrl?: string | null;
 }
 
 function parseTerms(raw: string | null | undefined): string[] {
@@ -47,7 +46,7 @@ function parseSignatures(raw: string | null | undefined): { left: string; right:
 }
 
 /** Print-ready receipt/invoice view. Used inside a modal. */
-export function Nota({ booking, appName = "Erlangga Rental Mobil", phone, notaTerms, notaSignatures, qrisUrl }: NotaProps) {
+export function Nota({ booking, appName = "Erlangga Rental Mobil", phone, notaTerms, notaSignatures }: NotaProps) {
   const subtotal = Number(booking.total_cost);
   const lateFee = Number(booking.late_fee || 0);
   const total = subtotal + lateFee;
@@ -164,22 +163,6 @@ export function Nota({ booking, appName = "Erlangga Rental Mobil", phone, notaTe
           </tr>
         </tfoot>
       </table>
-
-      {/* QRIS Pembayaran */}
-      {qrisUrl && (
-        <div className="mt-5 flex flex-col items-center rounded-lg border border-slate-200 p-4">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-700">
-            Pembayaran via QRIS
-          </p>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={qrisUrl}
-            alt="QRIS Pembayaran"
-            className="h-44 w-auto object-contain"
-          />
-          <p className="mt-2 text-[10px] text-slate-400">Scan QR di atas untuk pembayaran</p>
-        </div>
-      )}
 
       {booking.notes && (
         <div className="mt-4 rounded-lg bg-slate-50 p-3 text-sm">
