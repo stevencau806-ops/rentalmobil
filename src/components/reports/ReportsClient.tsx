@@ -230,6 +230,35 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
           </div>
 
           {/* Tabel Booking Bulan Ini */}
+          {/* Mobile: Card View */}
+          <div className="space-y-3 md:hidden">
+            {monthBookings.length === 0 ? (
+              <div className="rounded-xl border border-slate-200 px-4 py-8 text-center text-slate-400">
+                Tidak ada transaksi pada bulan ini.
+              </div>
+            ) : (
+              monthBookings.map((b) => (
+                <div key={b.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">{b.customers?.name}</p>
+                      <p className="text-xs text-slate-500">{b.cars?.brand} {b.cars?.model}</p>
+                    </div>
+                    <Badge tone={b.payment_status === "paid" ? "green" : "yellow"}>
+                      {paymentStatusLabel[b.payment_status]}
+                    </Badge>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between">
+                    <span className="text-xs text-slate-400">{formatTanggal(b.start_date)}</span>
+                    <span className="text-sm font-bold text-slate-900">{formatRupiah(Number(b.total_cost) + Number(b.late_fee || 0))}</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop: Table View */}
+          <div className="hidden md:block">
           <Card>
             <CardBody className="p-0">
               <div className="overflow-x-auto">
@@ -237,7 +266,7 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
                   <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                     <tr>
                       <th className="px-4 py-3">Pelanggan</th>
-                      <th className="px-4 py-3 hidden sm:table-cell">Mobil</th>
+                      <th className="px-4 py-3">Mobil</th>
                       <th className="px-4 py-3">Tanggal</th>
                       <th className="px-4 py-3 text-right">Total</th>
                       <th className="px-4 py-3">Status</th>
@@ -256,7 +285,7 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
                           <td className="px-4 py-3 font-medium text-slate-900">
                             {b.customers?.name}
                           </td>
-                          <td className="px-4 py-3 hidden sm:table-cell text-slate-500">
+                          <td className="px-4 py-3 text-slate-500">
                             {b.cars?.brand} {b.cars?.model}
                           </td>
                           <td className="px-4 py-3 text-xs text-slate-500">
@@ -278,6 +307,7 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
               </div>
             </CardBody>
           </Card>
+          </div>
 
           {/* Pendapatan Admin % (Komisi) - di bawah */}
           {commissionData.monthCommissions.length > 0 && (
