@@ -366,16 +366,16 @@ export function BookingClient({
 
   return (
     <div>
-      {/* Search + toolbar */}
-      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="sm:max-w-xs sm:flex-1">
-          <Input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Cari booking..."
-          />
-        </div>
-        <div className="flex flex-wrap gap-2">
+      {/* Search + toolbar - mobile only */}
+      <div className="mb-3 flex flex-col gap-2 md:hidden">
+        <div className="flex items-center gap-2">
+          <div className="flex-1">
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Cari booking..."
+            />
+          </div>
           <Button onClick={() => setNewOpen(true)}>+ Booking Baru</Button>
         </div>
       </div>
@@ -472,6 +472,7 @@ export function BookingClient({
           searchKeys={["notes"]}
           searchPlaceholder="Cari booking..."
           emptyMessage="Belum ada booking. Klik 'Booking Baru' untuk memulai."
+          toolbar={<Button onClick={() => setNewOpen(true)}>+ Booking Baru</Button>}
         />
       </div>
 
