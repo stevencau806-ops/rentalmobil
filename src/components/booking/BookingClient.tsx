@@ -393,14 +393,14 @@ export function BookingClient({
       render: (b) => (
         <div className="flex flex-col items-start gap-1">
           <button onClick={() => togglePayment(b)} title="Klik untuk ubah">
-            <Badge tone={b.payment_status === "paid" ? "green" : "amber"}>
-              {paymentStatusLabel[b.payment_status]}
-            </Badge>
+            <span className={`rounded px-2.5 py-1 text-xs font-bold ${b.payment_status === "paid" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+              {b.payment_status === "paid" ? "LUNAS" : "BELUM BAYAR"}
+            </span>
           </button>
           {!b.actual_return_date && <Badge tone="blue">Sewa Aktif</Badge>}
           {b.actual_return_date && b.fine_status === "pending" && (
             <button onClick={() => settleFine(b)}>
-              <Badge tone="orange">Denda: {fineStatusLabel[b.fine_status]}</Badge>
+              <span className="rounded px-2.5 py-1 text-xs font-bold bg-red-100 text-red-700">Denda: Perlu Dibayar</span>
             </button>
           )}
           {b.actual_return_date && b.fine_status === "paid" && (
@@ -492,14 +492,14 @@ export function BookingClient({
               {/* Status badges */}
               <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
                 <button onClick={() => togglePayment(b)} title="Klik untuk ubah">
-                  <Badge tone={b.payment_status === "paid" ? "green" : "amber"}>
-                    {paymentStatusLabel[b.payment_status]}
-                  </Badge>
+                  <span className={`rounded px-2.5 py-1 text-xs font-bold ${b.payment_status === "paid" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                    {b.payment_status === "paid" ? "LUNAS" : "BELUM BAYAR"}
+                  </span>
                 </button>
                 {!b.actual_return_date && <Badge tone="blue">Sewa Aktif</Badge>}
                 {b.actual_return_date && b.fine_status === "pending" && (
                   <button onClick={() => settleFine(b)}>
-                    <Badge tone="orange">Denda: {fineStatusLabel[b.fine_status]}</Badge>
+                    <span className="rounded px-2.5 py-1 text-xs font-bold bg-red-100 text-red-700">Denda: Perlu Dibayar</span>
                   </button>
                 )}
                 {b.actual_return_date && b.fine_status === "paid" && (
