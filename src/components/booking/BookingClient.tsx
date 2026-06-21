@@ -632,75 +632,88 @@ export function BookingClient({
             })()}
 
             {/* Additional Fines */}
-            <div className="rounded-lg border border-slate-200 p-3">
+            <div className="rounded-xl border border-slate-200 p-4">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase text-slate-600">Denda Tambahan</p>
+                <p className="text-sm font-semibold text-slate-700">Denda Tambahan</p>
                 <button
                   type="button"
                   onClick={() => setAdditionalFines([...additionalFines, { type: "lainnya", label: "", amount: 0 }])}
-                  className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-brand-50 px-3 py-1.5 text-xs font-semibold text-brand-700 hover:bg-brand-100 transition-colors"
                 >
-                  <Plus className="h-3 w-3" /> Tambah
+                  <Plus className="h-3.5 w-3.5" /> Tambah Denda
                 </button>
               </div>
+
               {additionalFines.length === 0 && (
-                <p className="mt-2 text-xs text-slate-400">Belum ada denda tambahan. Klik Tambah jika ada.</p>
+                <p className="mt-3 text-center text-xs text-slate-400">Tidak ada denda tambahan.</p>
               )}
-              {additionalFines.map((fine, i) => (
-                <div key={i} className="mt-2 flex items-center gap-2">
-                  <select
-                    value={fine.type}
-                    onChange={(e) => {
-                      const updated = [...additionalFines];
-                      const type = e.target.value;
-                      updated[i] = {
-                        ...updated[i],
-                        type,
-                        label: type === "bbm" ? "Bahan Bakar" : type === "kerusakan" ? "Kerusakan" : updated[i].label,
-                      };
-                      setAdditionalFines(updated);
-                    }}
-                    className="rounded-md border border-slate-300 px-2 py-1.5 text-xs"
-                  >
-                    <option value="bbm">Bahan Bakar</option>
-                    <option value="kerusakan">Kerusakan</option>
-                    <option value="lainnya">Lainnya</option>
-                  </select>
-                  <input
-                    type="text"
-                    placeholder="Keterangan"
-                    value={fine.label}
-                    onChange={(e) => {
-                      const updated = [...additionalFines];
-                      updated[i] = { ...updated[i], label: e.target.value };
-                      setAdditionalFines(updated);
-                    }}
-                    className="flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-xs"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Nominal"
-                    value={fine.amount || ""}
-                    onChange={(e) => {
-                      const updated = [...additionalFines];
-                      updated[i] = { ...updated[i], amount: Number(e.target.value) || 0 };
-                      setAdditionalFines(updated);
-                    }}
-                    className="w-28 rounded-md border border-slate-300 px-2 py-1.5 text-xs"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setAdditionalFines(additionalFines.filter((_, idx) => idx !== i))}
-                    className="rounded p-1 text-red-500 hover:bg-red-50"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ))}
+
+              <div className="mt-3 space-y-3">
+                {additionalFines.map((fine, i) => (
+                  <div key={i} className="rounded-lg bg-slate-50 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <select
+                        value={fine.type}
+                        onChange={(e) => {
+                          const updated = [...additionalFines];
+                          const type = e.target.value;
+                          updated[i] = {
+                            ...updated[i],
+                            type,
+                            label: type === "bbm" ? "Bahan Bakar" : type === "kerusakan" ? "Kerusakan" : updated[i].label,
+                          };
+                          setAdditionalFines(updated);
+                        }}
+                        className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700"
+                      >
+                        <option value="bbm">⛽ Bahan Bakar</option>
+                        <option value="kerusakan">🔧 Kerusakan</option>
+                        <option value="lainnya">📋 Lainnya</option>
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => setAdditionalFines(additionalFines.filter((_, idx) => idx !== i))}
+                        className="rounded-lg p-2 text-red-500 hover:bg-red-100 transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Keterangan (mis: BBM kurang 2 bar)"
+                      value={fine.label}
+                      onChange={(e) => {
+                        const updated = [...additionalFines];
+                        updated[i] = { ...updated[i], label: e.target.value };
+                        setAdditionalFines(updated);
+                      }}
+                      className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm placeholder:text-slate-400"
+                    />
+                    <div className="mt-2 relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-500">Rp</span>
+                      <input
+                        type="number"
+                        placeholder="0"
+                        value={fine.amount || ""}
+                        onChange={(e) => {
+                          const updated = [...additionalFines];
+                          updated[i] = { ...updated[i], amount: Number(e.target.value) || 0 };
+                          setAdditionalFines(updated);
+                        }}
+                        className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm font-semibold placeholder:text-slate-400"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
               {additionalFines.length > 0 && (
-                <p className="mt-2 text-right text-xs font-semibold text-slate-700">
-                  Subtotal denda tambahan: {formatRupiah(additionalFines.reduce((s, f) => s + (f.amount || 0), 0))}
-                </p>
+                <div className="mt-3 flex items-center justify-between rounded-lg bg-red-50 px-3 py-2">
+                  <span className="text-xs font-medium text-red-700">Total Denda Tambahan</span>
+                  <span className="text-sm font-bold text-red-700">
+                    {formatRupiah(additionalFines.reduce((s, f) => s + (f.amount || 0), 0))}
+                  </span>
+                </div>
               )}
             </div>
 
