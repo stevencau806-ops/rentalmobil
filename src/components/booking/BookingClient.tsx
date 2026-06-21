@@ -425,7 +425,7 @@ export function BookingClient({
           </Button>
           <Button
             size="sm"
-            className="bg-red-100 text-red-600 hover:bg-red-200"
+            className="bg-red-600 text-white hover:bg-red-700"
             onClick={() => setDeleteId(b.id)}
           >
             <Trash2 className="h-4 w-4" />
