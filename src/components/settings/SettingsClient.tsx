@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Settings as SettingsIcon, UserCircle, Lightbulb, FileText, PenLine, Plus, Trash2, GripVertical, QrCode } from "lucide-react";
-import type { Settings, FineType } from "@/lib/types";
+import type { Settings, FineType, ExpenseCategory } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -92,6 +92,23 @@ export function SettingsClient({ settings, admins, currentUserId }: SettingsClie
     } catch { return DEFAULT_FINE_TYPES; }
   });
   const [savingFineTypes, setSavingFineTypes] = useState(false);
+
+  // Expense categories
+  const DEFAULT_EXPENSE_TYPES: ExpenseCategory[] = [
+    { key: "service", label: "Servis Mobil", emoji: "🔧" },
+    { key: "tax", label: "Pajak Kendaraan", emoji: "🧾" },
+    { key: "oil", label: "Ganti Oli", emoji: "🛢️" },
+    { key: "commission", label: "Komisi", emoji: "💰" },
+    { key: "other", label: "Lainnya", emoji: "📦" },
+  ];
+  const [expenseTypes, setExpenseTypes] = useState<ExpenseCategory[]>(() => {
+    if (!settings?.expense_types) return DEFAULT_EXPENSE_TYPES;
+    try {
+      const parsed = JSON.parse(settings.expense_types);
+      return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_EXPENSE_TYPES;
+    } catch { return DEFAULT_EXPENSE_TYPES; }
+  });
+  const [savingExpenseTypes, setSavingExpenseTypes] = useState(false);
 
   const toast = useToast();
 
@@ -218,6 +235,33 @@ export function SettingsClient({ settings, admins, currentUserId }: SettingsClie
     }
     setFineTypes(valid);
     toast("Jenis denda disimpan", "success");
+  }
+
+  async function handleSaveExpenseTypes(e: React.FormEvent) {
+    e.preventDefault();
+    const valid = expenseTypes.filter((f) => f.label.trim() && f.key.trim());
+    if (valid.length === 0) {
+      toast("Minimal 1 kategori harus diisi", "error");
+      return;
+    }
+    setSavingExpenseTypes(true);
+    const supabase = createClient();
+    const payload = { expense_types: JSON.stringify(valid) };
+
+    let error;
+    if (settings?.id) {
+      ({ error } = await supabase.from("settings").update(payload).eq("id", settings.id));
+    } else {
+      ({ error } = await supabase.from("settings").insert({ ...payload, app_name: appName, fine_per_hour: Number(finePerHour) || 0 }));
+    }
+
+    setSavingExpenseTypes(false);
+    if (error) {
+      toast(`Gagal: ${error.message}`, "error");
+      return;
+    }
+    setExpenseTypes(valid);
+    toast("Kategori pengeluaran disimpan", "success");
   }
 
   function updateTerm(index: number, value: string) {
@@ -485,6 +529,74 @@ export function SettingsClient({ settings, admins, currentUserId }: SettingsClie
             <div className="flex justify-end pt-2">
               <Button type="submit" disabled={savingFineTypes}>
                 {savingFineTypes ? "Menyimpan..." : "Simpan Jenis Denda"}
+              </Button>
+            </div>
+          </form>
+        </CardBody>
+      </Card>
+
+      {/* Expense Categories / Kategori Pengeluaran */}
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <span className="inline-flex items-center gap-2">
+              <FileText className="h-4 w-4 text-brand-600" />
+              Kategori Pengeluaran
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardBody>
+          <form onSubmit={handleSaveExpenseTypes} className="space-y-3">
+            <p className="text-xs text-slate-500">
+              Atur kategori-kategori pengeluaran yang muncul di dropdown saat tambah pengeluaran.
+            </p>
+            {expenseTypes.map((et, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="🔧"
+                  value={et.emoji}
+                  onChange={(e) => {
+                    const updated = [...expenseTypes];
+                    updated[i] = { ...updated[i], emoji: e.target.value };
+                    setExpenseTypes(updated);
+                  }}
+                  className="w-12 rounded-lg border border-slate-300 px-2 py-2 text-center text-sm"
+                />
+                <input
+                  type="text"
+                  placeholder="Nama kategori"
+                  value={et.label}
+                  onChange={(e) => {
+                    const updated = [...expenseTypes];
+                    updated[i] = { ...updated[i], label: e.target.value, key: e.target.value.toLowerCase().replace(/\s+/g, "_") };
+                    setExpenseTypes(updated);
+                  }}
+                  className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => setExpenseTypes(expenseTypes.filter((_, idx) => idx !== i))}
+                  className="rounded-lg p-2 text-red-500 hover:bg-red-50"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setExpenseTypes([...expenseTypes, { key: "", label: "", emoji: "📋" }])}
+            >
+              <span className="inline-flex items-center gap-1">
+                <Plus className="h-3.5 w-3.5" />
+                Tambah Kategori
+              </span>
+            </Button>
+            <div className="flex justify-end pt-2">
+              <Button type="submit" disabled={savingExpenseTypes}>
+                {savingExpenseTypes ? "Menyimpan..." : "Simpan Kategori"}
               </Button>
             </div>
           </form>

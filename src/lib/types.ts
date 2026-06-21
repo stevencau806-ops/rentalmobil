@@ -86,9 +86,16 @@ export interface Settings {
   nota_signatures: string | null; // JSON: { left: string, right: string }
   qris_url: string | null; // URL gambar QRIS
   fine_types: string | null; // JSON: FineType[]
+  expense_types: string | null; // JSON: ExpenseCategory[]
 }
 
 export interface FineType {
+  key: string;
+  label: string;
+  emoji: string;
+}
+
+export interface ExpenseCategory {
   key: string;
   label: string;
   emoji: string;
