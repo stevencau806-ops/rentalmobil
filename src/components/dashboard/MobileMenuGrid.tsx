@@ -81,6 +81,16 @@ const menuItems: MenuItem[] = [
     ),
   },
   {
+    href: "/qris",
+    label: "QRIS",
+    gradient: "from-rose-500 to-red-600",
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM17 14v3h3M14 14h3v7" />
+      </svg>
+    ),
+  },
+  {
     href: "/pengaturan",
     label: "Pengaturan",
     gradient: "from-slate-500 to-gray-600",

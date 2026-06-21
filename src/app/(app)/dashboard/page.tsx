@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getCars, getBookings, getSettings } from "@/lib/queries";
+import { getCars, getBookings } from "@/lib/queries";
 import { formatRupiah, formatTanggal } from "@/lib/utils";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
@@ -12,7 +12,7 @@ import { MobileMenuGrid } from "@/components/dashboard/MobileMenuGrid";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const [cars, bookings, settings] = await Promise.all([getCars(), getBookings(), getSettings()]);
+  const [cars, bookings] = await Promise.all([getCars(), getBookings()]);
 
   const totalCars = cars.length;
   const availableCars = cars.filter((c) => c.status === "available").length;
@@ -157,26 +157,6 @@ export default async function DashboardPage() {
           </Link>
         ))}
       </div>
-
-      {/* QRIS - tampil kalau sudah diisi */}
-      {settings?.qris_url && (
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>QRIS Pembayaran</CardTitle>
-          </CardHeader>
-          <CardBody className="flex flex-col items-center py-4">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={settings.qris_url}
-              alt="QRIS Pembayaran"
-              className="h-52 w-auto rounded-lg object-contain sm:h-64"
-            />
-            <p className="mt-3 text-center text-xs text-slate-500">
-              Tunjukkan QR ini ke pelanggan untuk pembayaran
-            </p>
-          </CardBody>
-        </Card>
-      )}
     </div>
   );
 }
