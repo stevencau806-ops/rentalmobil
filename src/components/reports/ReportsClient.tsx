@@ -149,7 +149,7 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
   const tabs: { key: Tab; label: string; icon: string }[] = [
     { key: "monthly", label: "Bulanan", icon: "📅" },
     { key: "yearly", label: "Tahunan", icon: "📊" },
-    { key: "commission", label: "Komisi", icon: "💰" },
+    { key: "commission", label: "Admin %", icon: "💰" },
     { key: "expense", label: "Pengeluaran", icon: "💸" },
     { key: "history", label: "Riwayat", icon: "📜" },
   ];
@@ -170,7 +170,7 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
             </option>
           ))}
         </Select>
-        {(tab === "monthly" || tab === "expense") && (
+        {(tab === "monthly" || tab === "expense" || tab === "commission") && (
           <Select
             label="Bulan"
             value={month}
@@ -212,17 +212,20 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
           <h2 className="text-lg font-bold text-slate-900">
             Laporan Pendapatan — {namaBulan[month]} {year}
           </h2>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+
+          {/* Stat Cards: Pendapatan, Laba Bersih (tengah), Pengeluaran */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <StatCard label="Pendapatan" value={formatRupiah(monthRevenue)} icon="💰" tone="green" />
-            <StatCard label="Pengeluaran" value={formatRupiah(monthExpenses)} icon="💸" tone="red" />
-            <StatCard label="Komisi" value={formatRupiah(commissionData.monthTotal)} icon="🤝" tone="amber" />
             <StatCard
               label="Laba Bersih"
               value={formatRupiah(monthProfit)}
               icon="📈"
               tone={monthProfit >= 0 ? "blue" : "red"}
             />
+            <StatCard label="Pengeluaran" value={formatRupiah(monthExpenses)} icon="💸" tone="red" />
           </div>
+
+          {/* Tabel Booking Bulan Ini */}
           <Card>
             <CardBody className="p-0">
               <div className="overflow-x-auto">
@@ -271,6 +274,69 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
               </div>
             </CardBody>
           </Card>
+
+          {/* Pendapatan Admin % (Komisi) - di bawah */}
+          {commissionData.monthCommissions.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-bold text-slate-900">Pendapatan Admin %</h3>
+                <span className="text-sm font-bold text-amber-700">{formatRupiah(commissionData.monthTotal)}</span>
+              </div>
+
+              {/* Mobile: Card */}
+              <div className="space-y-2 md:hidden">
+                {commissionData.monthCommissions.map((item) => (
+                  <div key={item.booking.id} className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+                    <div>
+                      <p className="text-sm font-medium text-slate-900">{item.booking.customers?.name}</p>
+                      <p className="text-xs text-slate-500">{item.car?.brand} {item.car?.model} · {item.percent}%</p>
+                      {item.car?.commission_note && <p className="text-xs text-amber-600">{item.car.commission_note}</p>}
+                    </div>
+                    <p className="text-sm font-bold text-amber-700">{formatRupiah(item.commissionAmount)}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop: Table */}
+              <div className="hidden md:block">
+                <Card>
+                  <CardBody className="p-0">
+                    <table className="w-full text-left text-sm">
+                      <thead className="bg-amber-50 text-xs uppercase text-amber-700">
+                        <tr>
+                          <th className="px-4 py-3">Pelanggan</th>
+                          <th className="px-4 py-3">Mobil</th>
+                          <th className="px-4 py-3 text-right">Biaya Sewa</th>
+                          <th className="px-4 py-3 text-center">%</th>
+                          <th className="px-4 py-3 text-right">Pendapatan Admin</th>
+                          <th className="px-4 py-3">Keterangan</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {commissionData.monthCommissions.map((item) => (
+                          <tr key={item.booking.id}>
+                            <td className="px-4 py-3 font-medium text-slate-900">{item.booking.customers?.name}</td>
+                            <td className="px-4 py-3 text-slate-500">{item.car?.brand} {item.car?.model} · {item.car?.plate}</td>
+                            <td className="px-4 py-3 text-right">{formatRupiah(item.totalSewa)}</td>
+                            <td className="px-4 py-3 text-center"><Badge tone="amber">{item.percent}%</Badge></td>
+                            <td className="px-4 py-3 text-right font-bold text-amber-700">{formatRupiah(item.commissionAmount)}</td>
+                            <td className="px-4 py-3 text-xs text-slate-400">{item.car?.commission_note || "-"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr className="border-t-2 bg-amber-50 font-bold">
+                          <td colSpan={4} className="px-4 py-3 text-right text-amber-800">TOTAL</td>
+                          <td className="px-4 py-3 text-right text-amber-800">{formatRupiah(commissionData.monthTotal)}</td>
+                          <td></td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </CardBody>
+                </Card>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -349,7 +415,7 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
       {tab === "commission" && (
         <div className="space-y-4">
           <h2 className="text-lg font-bold text-slate-900">
-            Laporan Komisi — {namaBulan[month]} {year}
+            Pendapatan Admin % — {namaBulan[month]} {year}
           </h2>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <StatCard label="Total Komisi Bulan Ini" value={formatRupiah(commissionData.monthTotal)} icon="💰" tone="amber" hint={`${commissionData.monthCommissions.length} booking`} />
