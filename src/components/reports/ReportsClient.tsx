@@ -56,7 +56,7 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
       return d.getMonth() === month && d.getFullYear() === year;
     })
     .reduce((s, e) => s + Number(e.amount), 0);
-  const monthProfit = monthRevenue - monthExpenses - commissionData.monthTotal;
+  const monthProfit = monthRevenue - monthExpenses;
 
   // ---- Yearly revenue ----
   const yearBookings = bookings.filter(
@@ -146,6 +146,10 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
     return { monthCommissions, yearCommissions, monthTotal, yearTotal };
   }, [bookings, cars, month, year]);
 
+  // Net profit (after commission)
+  const monthNetProfit = monthRevenue - monthExpenses - commissionData.monthTotal;
+  const yearNetProfit = yearRevenue - yearExpenses - commissionData.yearTotal;
+
   const tabs: { key: Tab; label: string; icon: string }[] = [
     { key: "monthly", label: "Bulanan", icon: "📅" },
     { key: "yearly", label: "Tahunan", icon: "📊" },
@@ -218,9 +222,9 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
             <StatCard label="Pendapatan" value={formatRupiah(monthRevenue)} icon="💰" tone="green" />
             <StatCard
               label="Laba Bersih"
-              value={formatRupiah(monthProfit)}
+              value={formatRupiah(monthNetProfit)}
               icon="📈"
-              tone={monthProfit >= 0 ? "blue" : "red"}
+              tone={monthNetProfit >= 0 ? "blue" : "red"}
             />
             <StatCard label="Pengeluaran" value={formatRupiah(monthExpenses)} icon="💸" tone="red" />
           </div>
@@ -350,9 +354,9 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
             <StatCard label="Total Komisi" value={formatRupiah(commissionData.yearTotal)} icon="🤝" tone="amber" />
             <StatCard
               label="Laba Bersih"
-              value={formatRupiah(yearRevenue - yearExpenses - commissionData.yearTotal)}
+              value={formatRupiah(yearNetProfit)}
               icon="📈"
-              tone={yearRevenue - yearExpenses - commissionData.yearTotal >= 0 ? "blue" : "red"}
+              tone={yearNetProfit >= 0 ? "blue" : "red"}
               hint={`${yearBookings.length} transaksi`}
             />
           </div>
@@ -400,7 +404,7 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
                         {formatRupiah(yearExpenses)}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        {formatRupiah(yearRevenue - yearExpenses - commissionData.yearTotal)}
+                        {formatRupiah(yearNetProfit)}
                       </td>
                     </tr>
                   </tfoot>
