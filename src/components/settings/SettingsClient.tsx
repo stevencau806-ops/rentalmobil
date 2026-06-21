@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Settings as SettingsIcon, UserCircle, Lightbulb, FileText, PenLine, Plus, Trash2, GripVertical } from "lucide-react";
+import { Settings as SettingsIcon, UserCircle, Lightbulb, FileText, PenLine, Plus, Trash2, GripVertical, QrCode } from "lucide-react";
 import type { Settings } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
@@ -73,6 +73,10 @@ export function SettingsClient({ settings, admins, currentUserId }: SettingsClie
   // Nota signatures
   const [signatures, setSignatures] = useState(parseSignatures(settings?.nota_signatures));
   const [savingSignatures, setSavingSignatures] = useState(false);
+
+  // QRIS
+  const [qrisUrl, setQrisUrl] = useState(settings?.qris_url ?? "");
+  const [savingQris, setSavingQris] = useState(false);
 
   const toast = useToast();
 
@@ -151,6 +155,27 @@ export function SettingsClient({ settings, admins, currentUserId }: SettingsClie
       return;
     }
     toast("TTD nota disimpan", "success");
+  }
+
+  async function handleSaveQris(e: React.FormEvent) {
+    e.preventDefault();
+    setSavingQris(true);
+    const supabase = createClient();
+    const payload = { qris_url: qrisUrl.trim() || null };
+
+    let error;
+    if (settings?.id) {
+      ({ error } = await supabase.from("settings").update(payload).eq("id", settings.id));
+    } else {
+      ({ error } = await supabase.from("settings").insert({ ...payload, app_name: appName, fine_per_hour: Number(finePerHour) || 0 }));
+    }
+
+    setSavingQris(false);
+    if (error) {
+      toast(`Gagal: ${error.message}`, "error");
+      return;
+    }
+    toast("QRIS disimpan", "success");
   }
 
   function updateTerm(index: number, value: string) {
@@ -307,6 +332,49 @@ export function SettingsClient({ settings, admins, currentUserId }: SettingsClie
             <div className="flex justify-end">
               <Button type="submit" disabled={savingSignatures}>
                 {savingSignatures ? "Menyimpan..." : "Simpan TTD"}
+              </Button>
+            </div>
+          </form>
+        </CardBody>
+      </Card>
+
+      {/* QRIS */}
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <span className="inline-flex items-center gap-2">
+              <QrCode className="h-4 w-4 text-brand-600" />
+              QRIS Pembayaran
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardBody>
+          <form onSubmit={handleSaveQris} className="space-y-4">
+            <p className="text-xs text-slate-500">
+              Masukkan URL gambar QRIS. Gambar akan ditampilkan di Nota agar pelanggan bisa scan untuk bayar.
+            </p>
+            <Input
+              label="URL Gambar QRIS"
+              value={qrisUrl}
+              onChange={(e) => setQrisUrl(e.target.value)}
+              placeholder="https://res.cloudinary.com/... atau URL gambar QRIS lainnya"
+            />
+            {qrisUrl.trim() && (
+              <div className="rounded-lg border border-dashed border-slate-300 p-4">
+                <p className="mb-2 text-center text-[10px] font-semibold uppercase text-slate-400">Preview QRIS</p>
+                <div className="flex justify-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={qrisUrl.trim()}
+                    alt="QRIS Preview"
+                    className="h-48 w-auto rounded-lg border border-slate-200 object-contain"
+                  />
+                </div>
+              </div>
+            )}
+            <div className="flex justify-end">
+              <Button type="submit" disabled={savingQris}>
+                {savingQris ? "Menyimpan..." : "Simpan QRIS"}
               </Button>
             </div>
           </form>

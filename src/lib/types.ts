@@ -75,6 +75,7 @@ export interface Settings {
   phone: string | null;
   nota_terms: string | null; // JSON array of strings
   nota_signatures: string | null; // JSON: { left: string, right: string }
+  qris_url: string | null; // URL gambar QRIS
 }
 
 // Form input types (no id, no timestamps)

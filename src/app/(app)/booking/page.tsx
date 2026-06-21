@@ -30,6 +30,7 @@ export default async function BookingPage() {
         blacklistNiks={blacklist.map((b) => b.nik)}
         notaTerms={settings?.nota_terms ?? null}
         notaSignatures={settings?.nota_signatures ?? null}
+        qrisUrl={settings?.qris_url ?? null}
       />
     </div>
   );
