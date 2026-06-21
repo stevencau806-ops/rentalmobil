@@ -229,6 +229,19 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
             <StatCard label="Pengeluaran" value={formatRupiah(monthExpenses)} icon="💸" tone="red" />
           </div>
 
+          {/* Mobile: Pendapatan Admin % card (di atas list booking) */}
+          {commissionData.monthCommissions.length > 0 && (
+            <div className="md:hidden rounded-2xl bg-gradient-to-br from-violet-50 to-purple-100 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase text-violet-600">Pendapatan Admin %</p>
+                  <p className="mt-1 text-2xl font-bold text-violet-800">{formatRupiah(commissionData.monthTotal)}</p>
+                </div>
+                <span className="text-3xl opacity-80">🤝</span>
+              </div>
+            </div>
+          )}
+
           {/* Tabel Booking Bulan Ini */}
           {/* Mobile: Card View */}
           <div className="space-y-3 md:hidden">
@@ -309,10 +322,11 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
           </Card>
           </div>
 
-          {/* Pendapatan Admin % (Komisi) - di bawah */}
+          {/* Pendapatan Admin % (Komisi) - rincian di bawah */}
           {commissionData.monthCommissions.length > 0 && (
             <div className="space-y-3">
-              <div className="rounded-2xl bg-gradient-to-br from-violet-50 to-purple-100 p-4">
+              {/* Desktop: Summary card */}
+              <div className="hidden md:block rounded-2xl bg-gradient-to-br from-violet-50 to-purple-100 p-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-semibold uppercase text-violet-600">Pendapatan Admin %</p>
@@ -322,20 +336,23 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
                 </div>
               </div>
 
-              {/* Mobile: Card */}
-              <div className="space-y-2 md:hidden">
-                {commissionData.monthCommissions.map((item) => (
-                  <div key={item.booking.id} className="rounded-xl border border-violet-200 bg-violet-50/50 px-4 py-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-slate-900">{item.booking.customers?.name}</p>
-                        <p className="text-xs text-slate-500">{item.car?.brand} {item.car?.model} · {item.percent}%</p>
-                        {item.car?.commission_note && <p className="text-xs text-violet-600">{item.car.commission_note}</p>}
+              {/* Mobile: Rincian detail */}
+              <div className="md:hidden">
+                <p className="mb-2 text-xs font-semibold uppercase text-violet-600">Rincian Admin %</p>
+                <div className="space-y-2">
+                  {commissionData.monthCommissions.map((item) => (
+                    <div key={item.booking.id} className="rounded-xl border border-violet-200 bg-violet-50/50 px-4 py-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-slate-900">{item.booking.customers?.name}</p>
+                          <p className="text-xs text-slate-500">{item.car?.brand} {item.car?.model} · {item.percent}%</p>
+                          {item.car?.commission_note && <p className="text-xs text-violet-600">{item.car.commission_note}</p>}
+                        </div>
+                        <p className="text-sm font-bold text-violet-700">{formatRupiah(item.commissionAmount)}</p>
                       </div>
-                      <p className="text-sm font-bold text-violet-700">{formatRupiah(item.commissionAmount)}</p>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
 
               {/* Desktop: Table */}
