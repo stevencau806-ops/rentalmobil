@@ -414,19 +414,18 @@ export function BookingClient({
       header: "",
       className: "text-right",
       render: (b) => (
-        <div className="flex flex-wrap justify-end gap-1">
+        <div className="flex flex-wrap justify-end gap-1.5">
           {!b.actual_return_date && (
-            <Button size="sm" variant="outline" onClick={() => openReturn(b)}>
+            <Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => openReturn(b)}>
               Selesaikan
             </Button>
           )}
-          <Button size="sm" variant="ghost" onClick={() => setNotaBooking(b)}>
+          <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700" onClick={() => setNotaBooking(b)}>
             Nota
           </Button>
           <Button
             size="sm"
-            variant="ghost"
-            className="text-red-600 hover:bg-red-50"
+            className="bg-red-100 text-red-600 hover:bg-red-200"
             onClick={() => setDeleteId(b.id)}
           >
             <Trash2 className="h-4 w-4" />
