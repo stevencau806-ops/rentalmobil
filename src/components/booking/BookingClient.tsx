@@ -291,6 +291,62 @@ export function BookingClient({
     if (data) setBookings(data as Booking[]);
   }
 
+  // ---- Share to WhatsApp ----
+  function shareToWhatsApp(b: Booking) {
+    const customerPhone = b.customers?.phone;
+    const lateFee = Number(b.late_fee || 0);
+    let additionalTotal = 0;
+    let additionalLines = "";
+    if (b.additional_fines) {
+      try {
+        const fines: AdditionalFine[] = JSON.parse(b.additional_fines);
+        fines.forEach((f) => {
+          additionalTotal += f.amount || 0;
+          additionalLines += `• Denda ${f.label}: ${formatRupiah(f.amount)}\n`;
+        });
+      } catch { /* ignore */ }
+    }
+    const totalFines = lateFee + additionalTotal;
+    const grandTotal = Number(b.total_cost) + totalFines;
+
+    const text = [
+      `📄 *NOTA SEWA MOBIL*`,
+      `_Erlangga Rental Mobil_`,
+      `━━━━━━━━━━━━━━━`,
+      ``,
+      `*Pelanggan:* ${b.customers?.name ?? "-"}`,
+      `*Mobil:* ${b.cars?.brand} ${b.cars?.model} (${b.cars?.plate})`,
+      `*Periode:* ${formatTanggal(b.start_date)} → ${formatTanggal(b.end_date)} (${b.duration_days} hari)`,
+      ``,
+      `━━━━━━━━━━━━━━━`,
+      `*Sewa:* ${formatRupiah(Number(b.total_cost))}`,
+      lateFee > 0 ? `*Denda Terlambat:* ${formatRupiah(lateFee)}` : "",
+      additionalLines.trim(),
+      `━━━━━━━━━━━━━━━`,
+      `*TOTAL: ${formatRupiah(grandTotal)}*`,
+      `*Status:* ${b.payment_status === "paid" ? "✅ LUNAS" : "⏳ BELUM BAYAR"}`,
+      ``,
+      `Terima kasih telah menyewa di Erlangga Rental Mobil 🙏`,
+    ]
+      .filter((line) => line !== "")
+      .join("\n");
+
+    // Format phone number for WA
+    let waPhone = "";
+    if (customerPhone) {
+      waPhone = customerPhone.replace(/[^0-9]/g, "");
+      if (waPhone.startsWith("0")) {
+        waPhone = "62" + waPhone.slice(1);
+      }
+    }
+
+    const waUrl = waPhone
+      ? `https://wa.me/${waPhone}?text=${encodeURIComponent(text)}`
+      : `https://wa.me/?text=${encodeURIComponent(text)}`;
+
+    window.open(waUrl, "_blank");
+  }
+
   const columns: Column<Booking>[] = [
     {
       key: "customer",
@@ -753,6 +809,12 @@ export function BookingClient({
           <div className="mt-4 flex justify-end gap-2 no-print">
             <Button variant="outline" onClick={() => setNotaBooking(null)}>
               Tutup
+            </Button>
+            <Button variant="outline" onClick={() => shareToWhatsApp(notaBooking)}>
+              <span className="inline-flex items-center gap-1.5">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.113.549 4.1 1.511 5.828L0 24l6.335-1.652A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.82c-1.89 0-3.69-.508-5.27-1.45l-.378-.224-3.91 1.02 1.042-3.8-.247-.393A9.77 9.77 0 012.18 12c0-5.422 4.398-9.82 9.82-9.82 5.422 0 9.82 4.398 9.82 9.82 0 5.422-4.398 9.82-9.82 9.82z"/></svg>
+                Share WA
+              </span>
             </Button>
             <Button onClick={() => window.print()}>
               <span className="inline-flex items-center gap-1.5">
