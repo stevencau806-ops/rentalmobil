@@ -393,14 +393,14 @@ export function BookingClient({
       render: (b) => (
         <div className="flex flex-col items-start gap-1">
           <button onClick={() => togglePayment(b)} title="Klik untuk ubah">
-            <Badge tone={b.payment_status === "paid" ? "green" : "yellow"}>
+            <Badge tone={b.payment_status === "paid" ? "green" : "red"}>
               {paymentStatusLabel[b.payment_status]}
             </Badge>
           </button>
           {!b.actual_return_date && <Badge tone="blue">Sewa Aktif</Badge>}
           {b.actual_return_date && b.fine_status === "pending" && (
             <button onClick={() => settleFine(b)}>
-              <Badge tone="red">Denda: {fineStatusLabel[b.fine_status]}</Badge>
+              <Badge tone="amber">Denda: {fineStatusLabel[b.fine_status]}</Badge>
             </button>
           )}
           {b.actual_return_date && b.fine_status === "paid" && (
@@ -492,14 +492,14 @@ export function BookingClient({
               {/* Status badges */}
               <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
                 <button onClick={() => togglePayment(b)} title="Klik untuk ubah">
-                  <Badge tone={b.payment_status === "paid" ? "green" : "yellow"}>
+                  <Badge tone={b.payment_status === "paid" ? "green" : "red"}>
                     {paymentStatusLabel[b.payment_status]}
                   </Badge>
                 </button>
                 {!b.actual_return_date && <Badge tone="blue">Sewa Aktif</Badge>}
                 {b.actual_return_date && b.fine_status === "pending" && (
                   <button onClick={() => settleFine(b)}>
-                    <Badge tone="red">Denda: {fineStatusLabel[b.fine_status]}</Badge>
+                    <Badge tone="amber">Denda: {fineStatusLabel[b.fine_status]}</Badge>
                   </button>
                 )}
                 {b.actual_return_date && b.fine_status === "paid" && (
