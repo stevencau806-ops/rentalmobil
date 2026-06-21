@@ -88,6 +88,7 @@ export const expenseTypeLabel: Record<ExpenseType, string> = {
   service: "Servis Mobil",
   tax: "Pajak Kendaraan",
   oil: "Ganti Oli",
+  commission: "Komisi",
   other: "Lainnya",
 };
 
@@ -95,6 +96,7 @@ export const expenseTypeIcon: Record<ExpenseType, string> = {
   service: "🔧",
   tax: "🧾",
   oil: "🛢️",
+  commission: "💰",
   other: "📦",
 };
 

@@ -9,6 +9,8 @@ export interface Car {
   tariff_per_day: number;
   status: CarStatus;
   photo_url: string | null;
+  commission_percent: number; // 0 = milik sendiri
+  commission_note: string | null; // keterangan pemilik/catatan
   created_at: string;
 }
 
@@ -61,7 +63,7 @@ export interface AdditionalFine {
   amount: number;
 }
 
-export type ExpenseType = "service" | "tax" | "oil" | "other";
+export type ExpenseType = "service" | "tax" | "oil" | "commission" | "other";
 
 export interface Expense {
   id: string;

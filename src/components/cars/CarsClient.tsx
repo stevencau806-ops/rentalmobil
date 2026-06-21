@@ -27,6 +27,8 @@ interface FormState {
   tariff_per_day: string;
   status: CarStatus;
   photo_url: string;
+  commission_percent: string;
+  commission_note: string;
 }
 
 const emptyForm: FormState = {
@@ -37,6 +39,8 @@ const emptyForm: FormState = {
   tariff_per_day: "",
   status: "available",
   photo_url: "",
+  commission_percent: "0",
+  commission_note: "",
 };
 
 export function CarsClient({ initialCars }: CarsClientProps) {
@@ -63,6 +67,8 @@ export function CarsClient({ initialCars }: CarsClientProps) {
       tariff_per_day: car.tariff_per_day?.toString() ?? "",
       status: car.status,
       photo_url: car.photo_url ?? "",
+      commission_percent: (car.commission_percent ?? 0).toString(),
+      commission_note: car.commission_note ?? "",
     });
     setModalOpen(true);
   }
@@ -80,6 +86,8 @@ export function CarsClient({ initialCars }: CarsClientProps) {
       tariff_per_day: Number(form.tariff_per_day) || 0,
       status: form.status,
       photo_url: form.photo_url.trim() || null,
+      commission_percent: Number(form.commission_percent) || 0,
+      commission_note: form.commission_note.trim() || null,
     };
 
     const { error } = form.id
@@ -168,9 +176,14 @@ export function CarsClient({ initialCars }: CarsClientProps) {
       header: "Tarif/Hari",
       hideOnMobile: true,
       render: (c) => (
-        <span className="font-medium text-slate-700">
-          {formatRupiah(Number(c.tariff_per_day))}
-        </span>
+        <div>
+          <span className="font-medium text-slate-700">
+            {formatRupiah(Number(c.tariff_per_day))}
+          </span>
+          {c.commission_percent > 0 && (
+            <p className="text-xs text-amber-600">Komisi {c.commission_percent}%</p>
+          )}
+        </div>
       ),
     },
     {
@@ -278,6 +291,25 @@ export function CarsClient({ initialCars }: CarsClientProps) {
             placeholder="https://..."
             hint="Tempel URL gambar mobil. Kosongkan untuk ikon default."
           />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Input
+              label="Komisi (%)"
+              type="number"
+              min="0"
+              max="100"
+              value={form.commission_percent}
+              onChange={(e) => setForm({ ...form, commission_percent: e.target.value })}
+              placeholder="0"
+              hint="0% = milik sendiri. Isi persentase bagi hasil untuk mobil titipan."
+            />
+            <Input
+              label="Keterangan Komisi"
+              value={form.commission_note}
+              onChange={(e) => setForm({ ...form, commission_note: e.target.value })}
+              placeholder="Nama pemilik / catatan"
+              hint="Opsional. Misal: Pak Budi, Haji Udin, dll."
+            />
+          </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>
               Batal
