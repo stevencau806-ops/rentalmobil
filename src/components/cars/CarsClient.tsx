@@ -14,6 +14,18 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
 import { formatRupiah, statusMobilLabel } from "@/lib/utils";
 
+/** Format number string with thousand separators for display */
+function formatNumber(value: string): string {
+  const num = value.replace(/\D/g, "");
+  if (!num) return "";
+  return Number(num).toLocaleString("id-ID");
+}
+
+/** Parse formatted number back to raw digits */
+function parseNumber(formatted: string): string {
+  return formatted.replace(/\D/g, "");
+}
+
 interface CarsClientProps {
   initialCars: Car[];
 }
@@ -271,11 +283,12 @@ export function CarsClient({ initialCars }: CarsClientProps) {
             />
             <Input
               label="Tarif per Hari (Rp)"
-              type="number"
+              type="text"
+              inputMode="numeric"
               required
-              value={form.tariff_per_day}
-              onChange={(e) => setForm({ ...form, tariff_per_day: e.target.value })}
-              placeholder="350000"
+              value={formatNumber(form.tariff_per_day)}
+              onChange={(e) => setForm({ ...form, tariff_per_day: parseNumber(e.target.value) })}
+              placeholder="350.000"
             />
             <Input
               label="Status"
