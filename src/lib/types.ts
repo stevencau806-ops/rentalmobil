@@ -48,10 +48,17 @@ export interface Booking {
   payment_status: PaymentStatus;
   actual_return_date: string | null;
   notes: string | null;
+  additional_fines: string | null; // JSON: AdditionalFine[]
   created_at: string;
   // Joined (optional)
   cars?: Pick<Car, "brand" | "model" | "plate" | "tariff_per_day"> | null;
   customers?: Pick<Customer, "name" | "nik" | "phone"> | null;
+}
+
+export interface AdditionalFine {
+  type: string; // e.g. "bbm", "kerusakan", "lainnya"
+  label: string; // display name
+  amount: number;
 }
 
 export type ExpenseType = "service" | "tax" | "oil" | "other";

@@ -1,4 +1,4 @@
-import type { Booking } from "@/lib/types";
+import type { Booking, AdditionalFine } from "@/lib/types";
 import { formatRupiah, formatTanggal, formatTanggalWaktu } from "@/lib/utils";
 
 const DEFAULT_TERMS = [
@@ -49,7 +49,15 @@ function parseSignatures(raw: string | null | undefined): { left: string; right:
 export function Nota({ booking, appName = "Erlangga Rental Mobil", phone, notaTerms, notaSignatures }: NotaProps) {
   const subtotal = Number(booking.total_cost);
   const lateFee = Number(booking.late_fee || 0);
-  const total = subtotal + lateFee;
+  // Parse additional fines
+  let additionalFinesList: AdditionalFine[] = [];
+  if (booking.additional_fines) {
+    try {
+      additionalFinesList = JSON.parse(booking.additional_fines);
+    } catch { /* ignore */ }
+  }
+  const additionalFinesTotal = additionalFinesList.reduce((s, f) => s + (f.amount || 0), 0);
+  const total = subtotal + lateFee + additionalFinesTotal;
 
   const terms = parseTerms(notaTerms);
   const signatures = parseSignatures(notaSignatures);
@@ -151,6 +159,17 @@ export function Nota({ booking, appName = "Erlangga Rental Mobil", phone, notaTe
               </td>
             </tr>
           )}
+          {additionalFinesList.map((fine, i) => (
+            <tr key={i}>
+              <td className="py-2">
+                Denda: {fine.label || fine.type}
+              </td>
+              <td className="py-2 text-center text-red-600">{fine.type === "bbm" ? "BBM" : fine.type === "kerusakan" ? "Kerusakan" : "Lainnya"}</td>
+              <td className="py-2 text-right font-medium text-red-600">
+                {formatRupiah(fine.amount)}
+              </td>
+            </tr>
+          ))}
         </tbody>
         <tfoot>
           <tr className="border-t-2 border-slate-300">

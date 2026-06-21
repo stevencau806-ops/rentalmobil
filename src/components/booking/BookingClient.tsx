@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Trash2, TriangleAlert, Check, Printer } from "lucide-react";
-import type { Booking, Car, Customer } from "@/lib/types";
+import { Trash2, TriangleAlert, Check, Printer, Plus } from "lucide-react";
+import type { Booking, Car, Customer, AdditionalFine } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { DataTable } from "@/components/ui/DataTable";
 import type { Column } from "@/components/ui/DataTable";
@@ -71,6 +71,7 @@ export function BookingClient({
 
   const [returnBooking, setReturnBooking] = useState<Booking | null>(null);
   const [returnForm, setReturnForm] = useState<ReturnForm>({ actual_return_date: "" });
+  const [additionalFines, setAdditionalFines] = useState<AdditionalFine[]>([]);
   const [processingReturn, setProcessingReturn] = useState(false);
 
   const [notaBooking, setNotaBooking] = useState<Booking | null>(null);
@@ -80,6 +81,19 @@ export function BookingClient({
   const toast = useToast();
 
   const availableCars = cars.filter((c) => c.status === "available");
+
+  // Helper: calculate total all fines for a booking
+  function getTotalFines(b: Booking): number {
+    const lateFee = Number(b.late_fee || 0);
+    let additionalTotal = 0;
+    if (b.additional_fines) {
+      try {
+        const fines: AdditionalFine[] = JSON.parse(b.additional_fines);
+        additionalTotal = fines.reduce((s, f) => s + (f.amount || 0), 0);
+      } catch { /* ignore */ }
+    }
+    return lateFee + additionalTotal;
+  }
 
   // Filter bookings by search query for mobile card view
   const filteredBookings = useMemo(() => {
@@ -167,6 +181,13 @@ export function BookingClient({
       ? new Date(b.actual_return_date).toISOString().slice(0, 16)
       : new Date().toISOString().slice(0, 16);
     setReturnForm({ actual_return_date: defaultDate });
+    // Load existing additional fines if any
+    try {
+      const existing = b.additional_fines ? JSON.parse(b.additional_fines) : [];
+      setAdditionalFines(Array.isArray(existing) ? existing : []);
+    } catch {
+      setAdditionalFines([]);
+    }
   }
 
   // ---- Process return + compute late fee ----
@@ -185,13 +206,19 @@ export function BookingClient({
 
     const { hoursLate, fee } = hitungDenda(actualReturn, endDateTime.toISOString(), finePerHour);
 
+    // Calculate total additional fines
+    const validFines = additionalFines.filter((f) => f.amount > 0 && f.label.trim());
+    const totalAdditionalFines = validFines.reduce((sum, f) => sum + f.amount, 0);
+    const hasFines = fee > 0 || totalAdditionalFines > 0;
+
     setProcessingReturn(true);
     const { error } = await createClient()
       .from("bookings")
       .update({
         actual_return_date: actualReturn,
         late_fee: fee,
-        fine_status: fee > 0 ? "pending" : "none",
+        additional_fines: validFines.length > 0 ? JSON.stringify(validFines) : null,
+        fine_status: hasFines ? "pending" : "none",
       })
       .eq("id", returnBooking.id);
     setProcessingReturn(false);
@@ -201,12 +228,14 @@ export function BookingClient({
       return;
     }
 
-    if (fee > 0) {
-      toast(`Pengembalian tercatat. Denda: ${formatRupiah(fee)} (${hoursLate} jam)`, "info");
+    if (hasFines) {
+      const totalDenda = fee + totalAdditionalFines;
+      toast(`Pengembalian tercatat. Total denda: ${formatRupiah(totalDenda)}`, "info");
     } else {
       toast("Pengembalian tepat waktu. Tidak ada denda.", "success");
     }
     setReturnBooking(null);
+    setAdditionalFines([]);
     await refresh();
   }
 
@@ -272,16 +301,19 @@ export function BookingClient({
     {
       key: "total",
       header: "Total",
-      render: (b) => (
-        <div>
-          <p className="font-semibold text-slate-900">
-            {formatRupiah(Number(b.total_cost) + Number(b.late_fee || 0))}
-          </p>
-          {Number(b.late_fee) > 0 && (
-            <p className="text-xs text-red-600">+{formatRupiah(Number(b.late_fee))} denda</p>
-          )}
-        </div>
-      ),
+      render: (b) => {
+        const totalFines = getTotalFines(b);
+        return (
+          <div>
+            <p className="font-semibold text-slate-900">
+              {formatRupiah(Number(b.total_cost) + totalFines)}
+            </p>
+            {totalFines > 0 && (
+              <p className="text-xs text-red-600">+{formatRupiah(totalFines)} denda</p>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: "status",
@@ -369,10 +401,10 @@ export function BookingClient({
                 </div>
                 <div className="shrink-0 text-right">
                   <p className="text-sm font-bold text-slate-900">
-                    {formatRupiah(Number(b.total_cost) + Number(b.late_fee || 0))}
+                    {formatRupiah(Number(b.total_cost) + getTotalFines(b))}
                   </p>
-                  {Number(b.late_fee) > 0 && (
-                    <p className="text-[11px] text-red-600">+{formatRupiah(Number(b.late_fee))} denda</p>
+                  {getTotalFines(b) > 0 && (
+                    <p className="text-[11px] text-red-600">+{formatRupiah(getTotalFines(b))} denda</p>
                   )}
                 </div>
               </div>
@@ -557,7 +589,7 @@ export function BookingClient({
                 Jatuh tempo: {formatTanggal(returnBooking.end_date)} (23:59)
               </p>
               <p className="mt-1 text-xs text-slate-500">
-                Denda: {formatRupiah(finePerHour)}/jam keterlambatan
+                Denda keterlambatan: {formatRupiah(finePerHour)}/jam
               </p>
             </div>
 
@@ -586,17 +618,90 @@ export function BookingClient({
                   {fee > 0 ? (
                     <>
                       <p className="font-semibold">Terlambat {hoursLate} jam</p>
-                      <p>Denda: {formatRupiah(fee)}</p>
+                      <p>Denda keterlambatan: {formatRupiah(fee)}</p>
                     </>
                   ) : (
                     <p className="flex items-center gap-1.5 font-semibold">
                       <Check className="h-4 w-4 text-emerald-600" />
-                      Tepat waktu — tidak ada denda
+                      Tepat waktu — tidak ada denda keterlambatan
                     </p>
                   )}
                 </div>
               );
             })()}
+
+            {/* Additional Fines */}
+            <div className="rounded-lg border border-slate-200 p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase text-slate-600">Denda Tambahan</p>
+                <button
+                  type="button"
+                  onClick={() => setAdditionalFines([...additionalFines, { type: "lainnya", label: "", amount: 0 }])}
+                  className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200"
+                >
+                  <Plus className="h-3 w-3" /> Tambah
+                </button>
+              </div>
+              {additionalFines.length === 0 && (
+                <p className="mt-2 text-xs text-slate-400">Belum ada denda tambahan. Klik Tambah jika ada.</p>
+              )}
+              {additionalFines.map((fine, i) => (
+                <div key={i} className="mt-2 flex items-center gap-2">
+                  <select
+                    value={fine.type}
+                    onChange={(e) => {
+                      const updated = [...additionalFines];
+                      const type = e.target.value;
+                      updated[i] = {
+                        ...updated[i],
+                        type,
+                        label: type === "bbm" ? "Bahan Bakar" : type === "kerusakan" ? "Kerusakan" : updated[i].label,
+                      };
+                      setAdditionalFines(updated);
+                    }}
+                    className="rounded-md border border-slate-300 px-2 py-1.5 text-xs"
+                  >
+                    <option value="bbm">Bahan Bakar</option>
+                    <option value="kerusakan">Kerusakan</option>
+                    <option value="lainnya">Lainnya</option>
+                  </select>
+                  <input
+                    type="text"
+                    placeholder="Keterangan"
+                    value={fine.label}
+                    onChange={(e) => {
+                      const updated = [...additionalFines];
+                      updated[i] = { ...updated[i], label: e.target.value };
+                      setAdditionalFines(updated);
+                    }}
+                    className="flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-xs"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Nominal"
+                    value={fine.amount || ""}
+                    onChange={(e) => {
+                      const updated = [...additionalFines];
+                      updated[i] = { ...updated[i], amount: Number(e.target.value) || 0 };
+                      setAdditionalFines(updated);
+                    }}
+                    className="w-28 rounded-md border border-slate-300 px-2 py-1.5 text-xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setAdditionalFines(additionalFines.filter((_, idx) => idx !== i))}
+                    className="rounded p-1 text-red-500 hover:bg-red-50"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+              {additionalFines.length > 0 && (
+                <p className="mt-2 text-right text-xs font-semibold text-slate-700">
+                  Subtotal denda tambahan: {formatRupiah(additionalFines.reduce((s, f) => s + (f.amount || 0), 0))}
+                </p>
+              )}
+            </div>
 
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => setReturnBooking(null)}>
