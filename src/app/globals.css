@@ -26,17 +26,42 @@ body {
 
 /* Print styles for receipts/reports */
 @media print {
-  /* HIDE EVERYTHING */
-  body * {
+  /* Hide non-print elements */
+  .no-print,
+  .no-print * {
+    display: none !important;
+  }
+
+  /* Hide sidebar and navigation */
+  aside,
+  nav,
+  .fixed.inset-0 {
+    display: none !important;
+  }
+
+  html, body {
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Remove sidebar offset */
+  main {
+    padding-left: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* ===== NOTA PRINT (Booking page) ===== */
+  /* When #nota-print-area exists, hide everything else */
+  body:has(#nota-print-area) * {
     visibility: hidden !important;
   }
-
-  /* SHOW only nota and its children */
-  #nota-print-area,
-  #nota-print-area * {
+  body:has(#nota-print-area) #nota-print-area,
+  body:has(#nota-print-area) #nota-print-area * {
     visibility: visible !important;
   }
-
   #nota-print-area {
     position: fixed !important;
     top: 0 !important;
@@ -49,23 +74,6 @@ body {
     line-height: 1.4 !important;
     z-index: 99999 !important;
   }
-
-  /* No-print elements inside nota */
-  .no-print,
-  .no-print * {
-    display: none !important;
-    visibility: hidden !important;
-  }
-
-  html, body {
-    background: white !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    height: auto !important;
-    overflow: visible !important;
-  }
-
-  /* Compact spacing */
   #nota-print-area .h-24 {
     height: 3.5rem !important;
   }
@@ -118,9 +126,29 @@ body {
     margin-top: 0.1rem !important;
   }
 
+  /* ===== REPORT PRINT (Laporan page) ===== */
+  /* Show all content normally, just hide mobile card view and show desktop table */
+  .md\\:hidden {
+    display: none !important;
+  }
+  .hidden.md\\:block {
+    display: block !important;
+  }
+
+  /* Make report content full width */
+  main > div {
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+
+  /* Report typography */
+  table {
+    font-size: 11px !important;
+  }
+
   @page {
     size: A4;
-    margin: 6mm;
+    margin: 10mm;
   }
 }
 
