@@ -244,20 +244,6 @@ export function BookingClient({
       return;
     }
 
-    // Auto-create commission expense if car has commission
-    const car = cars.find((c) => c.id === returnBooking.car_id);
-    if (car && car.commission_percent > 0) {
-      const commissionAmount = Math.round(Number(returnBooking.total_cost) * car.commission_percent / 100);
-      const desc = `Komisi ${car.commission_percent}% - ${car.brand} ${car.model} (${car.plate})${car.commission_note ? ` · ${car.commission_note}` : ""}`;
-      await createClient().from("expenses").insert({
-        type: "commission",
-        car_id: car.id,
-        amount: commissionAmount,
-        description: desc,
-        date: new Date().toISOString().slice(0, 10),
-      });
-    }
-
     if (hasFines) {
       const totalDenda = fee + totalAdditionalFines;
       toast(`Pengembalian tercatat. Total denda: ${formatRupiah(totalDenda)}`, "info");

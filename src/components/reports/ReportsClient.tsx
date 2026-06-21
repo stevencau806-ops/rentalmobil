@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { Booking, Expense, ExpenseType } from "@/lib/types";
+import type { Booking, Expense, ExpenseType, Car } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody } from "@/components/ui/Card";
 import { Input, Select } from "@/components/ui/Input";
@@ -18,16 +18,17 @@ import {
 interface ReportsClientProps {
   bookings: Booking[];
   expenses: Expense[];
+  cars: Car[];
 }
 
-type Tab = "monthly" | "yearly" | "expense" | "history";
+type Tab = "monthly" | "yearly" | "commission" | "expense" | "history";
 
 const namaBulan = [
   "Januari", "Februari", "Maret", "April", "Mei", "Juni",
   "Juli", "Agustus", "September", "Oktober", "November", "Desember",
 ];
 
-export function ReportsClient({ bookings, expenses }: ReportsClientProps) {
+export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) {
   const now = new Date();
   const [tab, setTab] = useState<Tab>("monthly");
   const [month, setMonth] = useState(now.getMonth());
@@ -55,7 +56,7 @@ export function ReportsClient({ bookings, expenses }: ReportsClientProps) {
       return d.getMonth() === month && d.getFullYear() === year;
     })
     .reduce((s, e) => s + Number(e.amount), 0);
-  const monthProfit = monthRevenue - monthExpenses;
+  const monthProfit = monthRevenue - monthExpenses - commissionData.monthTotal;
 
   // ---- Yearly revenue ----
   const yearBookings = bookings.filter(
@@ -98,9 +99,57 @@ export function ReportsClient({ bookings, expenses }: ReportsClientProps) {
     count: yearExpensesList.filter((e) => e.type === t).length,
   }));
 
+  // ---- Commission calculation ----
+  // Only from completed bookings (actual_return_date exists) with car that has commission
+  const commissionData = useMemo(() => {
+    const completedBookings = bookings.filter((b) => b.actual_return_date);
+    const monthCommissions = completedBookings
+      .filter((b) => {
+        const d = new Date(b.actual_return_date!);
+        return d.getMonth() === month && d.getFullYear() === year;
+      })
+      .map((b) => {
+        const car = cars.find((c) => c.id === b.car_id);
+        const percent = car?.commission_percent ?? 0;
+        const totalSewa = Number(b.total_cost);
+        const commissionAmount = Math.round(totalSewa * percent / 100);
+        return {
+          booking: b,
+          car,
+          percent,
+          totalSewa,
+          commissionAmount,
+        };
+      })
+      .filter((item) => item.percent > 0);
+
+    const yearCommissions = completedBookings
+      .filter((b) => new Date(b.actual_return_date!).getFullYear() === year)
+      .map((b) => {
+        const car = cars.find((c) => c.id === b.car_id);
+        const percent = car?.commission_percent ?? 0;
+        const totalSewa = Number(b.total_cost);
+        const commissionAmount = Math.round(totalSewa * percent / 100);
+        return {
+          booking: b,
+          car,
+          percent,
+          totalSewa,
+          commissionAmount,
+        };
+      })
+      .filter((item) => item.percent > 0);
+
+    const monthTotal = monthCommissions.reduce((s, c) => s + c.commissionAmount, 0);
+    const yearTotal = yearCommissions.reduce((s, c) => s + c.commissionAmount, 0);
+
+    return { monthCommissions, yearCommissions, monthTotal, yearTotal };
+  }, [bookings, cars, month, year]);
+
   const tabs: { key: Tab; label: string; icon: string }[] = [
     { key: "monthly", label: "Bulanan", icon: "📅" },
     { key: "yearly", label: "Tahunan", icon: "📊" },
+    { key: "commission", label: "Komisi", icon: "💰" },
     { key: "expense", label: "Pengeluaran", icon: "💸" },
     { key: "history", label: "Riwayat", icon: "📜" },
   ];
@@ -163,9 +212,10 @@ export function ReportsClient({ bookings, expenses }: ReportsClientProps) {
           <h2 className="text-lg font-bold text-slate-900">
             Laporan Pendapatan — {namaBulan[month]} {year}
           </h2>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <StatCard label="Pendapatan" value={formatRupiah(monthRevenue)} icon="💰" tone="green" />
             <StatCard label="Pengeluaran" value={formatRupiah(monthExpenses)} icon="💸" tone="red" />
+            <StatCard label="Komisi" value={formatRupiah(commissionData.monthTotal)} icon="🤝" tone="amber" />
             <StatCard
               label="Laba Bersih"
               value={formatRupiah(monthProfit)}
@@ -228,14 +278,15 @@ export function ReportsClient({ bookings, expenses }: ReportsClientProps) {
       {tab === "yearly" && (
         <div className="space-y-4">
           <h2 className="text-lg font-bold text-slate-900">Laporan Tahunan — {year}</h2>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <StatCard label="Total Pendapatan" value={formatRupiah(yearRevenue)} icon="💰" tone="green" />
             <StatCard label="Total Pengeluaran" value={formatRupiah(yearExpenses)} icon="💸" tone="red" />
+            <StatCard label="Total Komisi" value={formatRupiah(commissionData.yearTotal)} icon="🤝" tone="amber" />
             <StatCard
               label="Laba Bersih"
-              value={formatRupiah(yearRevenue - yearExpenses)}
+              value={formatRupiah(yearRevenue - yearExpenses - commissionData.yearTotal)}
               icon="📈"
-              tone={yearRevenue - yearExpenses >= 0 ? "blue" : "red"}
+              tone={yearRevenue - yearExpenses - commissionData.yearTotal >= 0 ? "blue" : "red"}
               hint={`${yearBookings.length} transaksi`}
             />
           </div>
@@ -283,7 +334,7 @@ export function ReportsClient({ bookings, expenses }: ReportsClientProps) {
                         {formatRupiah(yearExpenses)}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        {formatRupiah(yearRevenue - yearExpenses)}
+                        {formatRupiah(yearRevenue - yearExpenses - commissionData.yearTotal)}
                       </td>
                     </tr>
                   </tfoot>
@@ -291,6 +342,121 @@ export function ReportsClient({ bookings, expenses }: ReportsClientProps) {
               </div>
             </CardBody>
           </Card>
+        </div>
+      )}
+
+      {/* ===== Commission ===== */}
+      {tab === "commission" && (
+        <div className="space-y-4">
+          <h2 className="text-lg font-bold text-slate-900">
+            Laporan Komisi — {namaBulan[month]} {year}
+          </h2>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <StatCard label="Total Komisi Bulan Ini" value={formatRupiah(commissionData.monthTotal)} icon="💰" tone="amber" hint={`${commissionData.monthCommissions.length} booking`} />
+            <StatCard label="Total Komisi Tahun Ini" value={formatRupiah(commissionData.yearTotal)} icon="📊" tone="amber" hint={`${commissionData.yearCommissions.length} booking`} />
+          </div>
+
+          {/* Mobile: Card View */}
+          <div className="space-y-3 md:hidden">
+            {commissionData.monthCommissions.length === 0 ? (
+              <div className="rounded-xl border border-slate-200 px-4 py-8 text-center text-slate-400">
+                Tidak ada komisi pada bulan ini.
+              </div>
+            ) : (
+              commissionData.monthCommissions.map((item) => (
+                <div key={item.booking.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">{item.booking.customers?.name}</p>
+                      <p className="text-xs text-slate-500">
+                        {item.car?.brand} {item.car?.model} · {item.car?.plate}
+                      </p>
+                    </div>
+                    <Badge tone="amber">{item.percent}%</Badge>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between rounded-lg bg-amber-50 px-3 py-2">
+                    <div className="text-xs text-slate-600">
+                      <p>Sewa: {formatRupiah(item.totalSewa)}</p>
+                      <p className="text-slate-400">{formatTanggal(item.booking.actual_return_date!)}</p>
+                    </div>
+                    <p className="text-sm font-bold text-amber-700">{formatRupiah(item.commissionAmount)}</p>
+                  </div>
+                  {item.car?.commission_note && (
+                    <p className="mt-2 text-xs text-slate-400">📝 {item.car.commission_note}</p>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop: Table View */}
+          <div className="hidden md:block">
+            <Card>
+              <CardBody className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                      <tr>
+                        <th className="px-4 py-3">Pelanggan</th>
+                        <th className="px-4 py-3">Mobil</th>
+                        <th className="px-4 py-3">Tgl Kembali</th>
+                        <th className="px-4 py-3 text-right">Biaya Sewa</th>
+                        <th className="px-4 py-3 text-center">Komisi</th>
+                        <th className="px-4 py-3 text-right">Jumlah Komisi</th>
+                        <th className="px-4 py-3">Keterangan</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {commissionData.monthCommissions.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="px-4 py-8 text-center text-slate-400">
+                            Tidak ada komisi pada bulan ini.
+                          </td>
+                        </tr>
+                      ) : (
+                        commissionData.monthCommissions.map((item) => (
+                          <tr key={item.booking.id}>
+                            <td className="px-4 py-3 font-medium text-slate-900">
+                              {item.booking.customers?.name}
+                            </td>
+                            <td className="px-4 py-3 text-slate-500">
+                              {item.car?.brand} {item.car?.model} · {item.car?.plate}
+                            </td>
+                            <td className="px-4 py-3 text-xs text-slate-500">
+                              {formatTanggal(item.booking.actual_return_date!)}
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              {formatRupiah(item.totalSewa)}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <Badge tone="amber">{item.percent}%</Badge>
+                            </td>
+                            <td className="px-4 py-3 text-right font-bold text-amber-700">
+                              {formatRupiah(item.commissionAmount)}
+                            </td>
+                            <td className="px-4 py-3 text-xs text-slate-400">
+                              {item.car?.commission_note || "-"}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                    {commissionData.monthCommissions.length > 0 && (
+                      <tfoot>
+                        <tr className="border-t-2 border-slate-200 bg-amber-50 font-bold">
+                          <td colSpan={5} className="px-4 py-3 text-right">TOTAL KOMISI</td>
+                          <td className="px-4 py-3 text-right text-amber-800">
+                            {formatRupiah(commissionData.monthTotal)}
+                          </td>
+                          <td></td>
+                        </tr>
+                      </tfoot>
+                    )}
+                  </table>
+                </div>
+              </CardBody>
+            </Card>
+          </div>
         </div>
       )}
 
