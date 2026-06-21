@@ -26,14 +26,85 @@ body {
 
 /* Print styles for receipts/reports */
 @media print {
-  .no-print {
+  .no-print,
+  nav,
+  aside,
+  header,
+  footer,
+  button {
     display: none !important;
   }
   .print-only {
     display: block !important;
   }
-  body {
+  html, body {
+    height: auto !important;
+    overflow: visible !important;
     background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  /* Make nota the only visible content */
+  #nota-print-area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 10mm !important;
+    font-size: 11px !important;
+    line-height: 1.4 !important;
+  }
+  #nota-print-area * {
+    break-inside: avoid;
+  }
+  #nota-print-area table {
+    font-size: 10px !important;
+  }
+  #nota-print-area .text-lg {
+    font-size: 13px !important;
+  }
+  #nota-print-area .text-xs {
+    font-size: 9px !important;
+  }
+  #nota-print-area .text-\[11px\] {
+    font-size: 9px !important;
+  }
+  #nota-print-area .mt-8 {
+    margin-top: 1.5rem !important;
+  }
+  #nota-print-area .mt-16 {
+    margin-top: 2.5rem !important;
+  }
+  #nota-print-area .p-6 {
+    padding: 0 !important;
+  }
+  #nota-print-area .p-4 {
+    padding: 0.5rem !important;
+  }
+  #nota-print-area .p-3 {
+    padding: 0.4rem !important;
+  }
+  #nota-print-area .mt-5 {
+    margin-top: 0.75rem !important;
+  }
+  #nota-print-area .mt-6 {
+    margin-top: 1rem !important;
+  }
+  #nota-print-area .mt-4 {
+    margin-top: 0.5rem !important;
+  }
+  #nota-print-area .space-y-1 > * + * {
+    margin-top: 0.15rem !important;
+  }
+  #nota-print-area .h-24 {
+    height: 4rem !important;
+  }
+  #nota-print-area .pb-4 {
+    padding-bottom: 0.5rem !important;
+  }
+  @page {
+    size: A4;
+    margin: 8mm;
   }
 }
 
