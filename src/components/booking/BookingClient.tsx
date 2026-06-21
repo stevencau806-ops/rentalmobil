@@ -510,17 +510,16 @@ export function BookingClient({
               {/* Actions */}
               <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3">
                 {!b.actual_return_date && (
-                  <Button size="sm" variant="outline" onClick={() => openReturn(b)} className="flex-1">
+                  <Button size="sm" className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => openReturn(b)}>
                     Selesaikan
                   </Button>
                 )}
-                <Button size="sm" variant="ghost" onClick={() => setNotaBooking(b)}>
+                <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700" onClick={() => setNotaBooking(b)}>
                   Nota
                 </Button>
                 <Button
                   size="sm"
-                  variant="ghost"
-                  className="text-red-600 hover:bg-red-50"
+                  className="bg-red-600 text-white hover:bg-red-700"
                   onClick={() => setDeleteId(b.id)}
                 >
                   <Trash2 className="h-4 w-4" />
