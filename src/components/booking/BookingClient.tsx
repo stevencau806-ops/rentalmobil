@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Trash2, TriangleAlert, Check, Printer, Plus } from "lucide-react";
-import type { Booking, Car, Customer, AdditionalFine } from "@/lib/types";
+import type { Booking, Car, Customer, AdditionalFine, FineType } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { DataTable } from "@/components/ui/DataTable";
 import type { Column } from "@/components/ui/DataTable";
@@ -33,6 +33,7 @@ interface BookingClientProps {
   notaTerms: string | null;
   notaSignatures: string | null;
   qrisUrl: string | null;
+  fineTypes: string | null;
 }
 
 interface NewBookingForm {
@@ -57,6 +58,7 @@ export function BookingClient({
   notaTerms,
   notaSignatures,
   qrisUrl,
+  fineTypes: fineTypesRaw,
 }: BookingClientProps) {
   const [bookings, setBookings] = useState<Booking[]>(initialBookings);
   const [newOpen, setNewOpen] = useState(false);
@@ -81,6 +83,20 @@ export function BookingClient({
   const toast = useToast();
 
   const availableCars = cars.filter((c) => c.status === "available");
+
+  // Parse fine types from settings
+  const DEFAULT_FINE_TYPES: FineType[] = [
+    { key: "bbm", label: "Bahan Bakar", emoji: "⛽" },
+    { key: "kerusakan", label: "Kerusakan", emoji: "🔧" },
+    { key: "lainnya", label: "Lainnya", emoji: "📋" },
+  ];
+  const fineTypeOptions: FineType[] = useMemo(() => {
+    if (!fineTypesRaw) return DEFAULT_FINE_TYPES;
+    try {
+      const parsed = JSON.parse(fineTypesRaw);
+      return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_FINE_TYPES;
+    } catch { return DEFAULT_FINE_TYPES; }
+  }, [fineTypesRaw]);
 
   // Helper: calculate total all fines for a booking
   function getTotalFines(b: Booking): number {
@@ -637,7 +653,7 @@ export function BookingClient({
                 <p className="text-sm font-semibold text-slate-700">Denda Tambahan</p>
                 <button
                   type="button"
-                  onClick={() => setAdditionalFines([...additionalFines, { type: "lainnya", label: "", amount: 0 }])}
+                  onClick={() => setAdditionalFines([...additionalFines, { type: fineTypeOptions[0]?.key ?? "lainnya", label: fineTypeOptions[0]?.label ?? "", amount: 0 }])}
                   className="inline-flex items-center gap-1.5 rounded-lg bg-brand-50 px-3 py-1.5 text-xs font-semibold text-brand-700 hover:bg-brand-100 transition-colors"
                 >
                   <Plus className="h-3.5 w-3.5" /> Tambah Denda
@@ -657,18 +673,19 @@ export function BookingClient({
                         onChange={(e) => {
                           const updated = [...additionalFines];
                           const type = e.target.value;
+                          const matched = fineTypeOptions.find((ft) => ft.key === type);
                           updated[i] = {
                             ...updated[i],
                             type,
-                            label: type === "bbm" ? "Bahan Bakar" : type === "kerusakan" ? "Kerusakan" : updated[i].label,
+                            label: matched?.label ?? updated[i].label,
                           };
                           setAdditionalFines(updated);
                         }}
                         className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700"
                       >
-                        <option value="bbm">⛽ Bahan Bakar</option>
-                        <option value="kerusakan">🔧 Kerusakan</option>
-                        <option value="lainnya">📋 Lainnya</option>
+                        {fineTypeOptions.map((ft) => (
+                          <option key={ft.key} value={ft.key}>{ft.emoji} {ft.label}</option>
+                        ))}
                       </select>
                       <button
                         type="button"

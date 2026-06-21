@@ -31,6 +31,7 @@ export default async function BookingPage() {
         notaTerms={settings?.nota_terms ?? null}
         notaSignatures={settings?.nota_signatures ?? null}
         qrisUrl={settings?.qris_url ?? null}
+        fineTypes={settings?.fine_types ?? null}
       />
     </div>
   );

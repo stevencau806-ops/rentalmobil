@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Settings as SettingsIcon, UserCircle, Lightbulb, FileText, PenLine, Plus, Trash2, GripVertical, QrCode } from "lucide-react";
-import type { Settings } from "@/lib/types";
+import type { Settings, FineType } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -77,6 +77,21 @@ export function SettingsClient({ settings, admins, currentUserId }: SettingsClie
   // QRIS
   const [qrisUrl, setQrisUrl] = useState(settings?.qris_url ?? "");
   const [savingQris, setSavingQris] = useState(false);
+
+  // Fine types
+  const DEFAULT_FINE_TYPES: FineType[] = [
+    { key: "bbm", label: "Bahan Bakar", emoji: "⛽" },
+    { key: "kerusakan", label: "Kerusakan", emoji: "🔧" },
+    { key: "lainnya", label: "Lainnya", emoji: "📋" },
+  ];
+  const [fineTypes, setFineTypes] = useState<FineType[]>(() => {
+    if (!settings?.fine_types) return DEFAULT_FINE_TYPES;
+    try {
+      const parsed = JSON.parse(settings.fine_types);
+      return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_FINE_TYPES;
+    } catch { return DEFAULT_FINE_TYPES; }
+  });
+  const [savingFineTypes, setSavingFineTypes] = useState(false);
 
   const toast = useToast();
 
@@ -176,6 +191,33 @@ export function SettingsClient({ settings, admins, currentUserId }: SettingsClie
       return;
     }
     toast("QRIS disimpan", "success");
+  }
+
+  async function handleSaveFineTypes(e: React.FormEvent) {
+    e.preventDefault();
+    const valid = fineTypes.filter((f) => f.label.trim() && f.key.trim());
+    if (valid.length === 0) {
+      toast("Minimal 1 jenis denda harus diisi", "error");
+      return;
+    }
+    setSavingFineTypes(true);
+    const supabase = createClient();
+    const payload = { fine_types: JSON.stringify(valid) };
+
+    let error;
+    if (settings?.id) {
+      ({ error } = await supabase.from("settings").update(payload).eq("id", settings.id));
+    } else {
+      ({ error } = await supabase.from("settings").insert({ ...payload, app_name: appName, fine_per_hour: Number(finePerHour) || 0 }));
+    }
+
+    setSavingFineTypes(false);
+    if (error) {
+      toast(`Gagal: ${error.message}`, "error");
+      return;
+    }
+    setFineTypes(valid);
+    toast("Jenis denda disimpan", "success");
   }
 
   function updateTerm(index: number, value: string) {
@@ -375,6 +417,74 @@ export function SettingsClient({ settings, admins, currentUserId }: SettingsClie
             <div className="flex justify-end">
               <Button type="submit" disabled={savingQris}>
                 {savingQris ? "Menyimpan..." : "Simpan QRIS"}
+              </Button>
+            </div>
+          </form>
+        </CardBody>
+      </Card>
+
+      {/* Fine Types / Jenis Denda */}
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <span className="inline-flex items-center gap-2">
+              <FileText className="h-4 w-4 text-brand-600" />
+              Jenis Denda
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardBody>
+          <form onSubmit={handleSaveFineTypes} className="space-y-3">
+            <p className="text-xs text-slate-500">
+              Atur jenis-jenis denda yang muncul di dropdown saat selesaikan sewa.
+            </p>
+            {fineTypes.map((ft, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="🔧"
+                  value={ft.emoji}
+                  onChange={(e) => {
+                    const updated = [...fineTypes];
+                    updated[i] = { ...updated[i], emoji: e.target.value };
+                    setFineTypes(updated);
+                  }}
+                  className="w-12 rounded-lg border border-slate-300 px-2 py-2 text-center text-sm"
+                />
+                <input
+                  type="text"
+                  placeholder="Nama jenis denda"
+                  value={ft.label}
+                  onChange={(e) => {
+                    const updated = [...fineTypes];
+                    updated[i] = { ...updated[i], label: e.target.value, key: e.target.value.toLowerCase().replace(/\s+/g, "_") };
+                    setFineTypes(updated);
+                  }}
+                  className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => setFineTypes(fineTypes.filter((_, idx) => idx !== i))}
+                  className="rounded-lg p-2 text-red-500 hover:bg-red-50"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setFineTypes([...fineTypes, { key: "", label: "", emoji: "📋" }])}
+            >
+              <span className="inline-flex items-center gap-1">
+                <Plus className="h-3.5 w-3.5" />
+                Tambah Jenis
+              </span>
+            </Button>
+            <div className="flex justify-end pt-2">
+              <Button type="submit" disabled={savingFineTypes}>
+                {savingFineTypes ? "Menyimpan..." : "Simpan Jenis Denda"}
               </Button>
             </div>
           </form>

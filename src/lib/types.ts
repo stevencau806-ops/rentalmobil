@@ -83,6 +83,13 @@ export interface Settings {
   nota_terms: string | null; // JSON array of strings
   nota_signatures: string | null; // JSON: { left: string, right: string }
   qris_url: string | null; // URL gambar QRIS
+  fine_types: string | null; // JSON: FineType[]
+}
+
+export interface FineType {
+  key: string;
+  label: string;
+  emoji: string;
 }
 
 // Form input types (no id, no timestamps)
