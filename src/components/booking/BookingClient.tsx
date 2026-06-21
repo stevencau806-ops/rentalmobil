@@ -393,7 +393,7 @@ export function BookingClient({
       render: (b) => (
         <div className="flex flex-col items-start gap-1">
           <button onClick={() => togglePayment(b)} title="Klik untuk ubah">
-            <span className={`rounded px-2.5 py-1 text-xs font-bold ${b.payment_status === "paid" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+            <span className={`rounded px-2.5 py-1 text-xs font-bold text-white ${b.payment_status === "paid" ? "bg-emerald-500" : "bg-amber-500"}`}>
               {b.payment_status === "paid" ? "LUNAS" : "BELUM BAYAR"}
             </span>
           </button>
@@ -492,7 +492,7 @@ export function BookingClient({
               {/* Status badges */}
               <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
                 <button onClick={() => togglePayment(b)} title="Klik untuk ubah">
-                  <span className={`rounded px-2.5 py-1 text-xs font-bold ${b.payment_status === "paid" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                  <span className={`rounded px-2.5 py-1 text-xs font-bold text-white ${b.payment_status === "paid" ? "bg-emerald-500" : "bg-amber-500"}`}>
                     {b.payment_status === "paid" ? "LUNAS" : "BELUM BAYAR"}
                   </span>
                 </button>
