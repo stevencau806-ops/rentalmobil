@@ -18,9 +18,9 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
-      { url: "/logo.png", type: "image/png", sizes: "500x500" },
+      { url: "https://res.cloudinary.com/dfxc4ceya/image/upload/v1782120655/icon-512x512_tuodrb.png", type: "image/png", sizes: "512x512" },
     ],
-    apple: "/apple-touch-icon.png",
+    apple: "https://res.cloudinary.com/dfxc4ceya/image/upload/v1782120655/icon-512x512_tuodrb.png",
   },
 };
 
