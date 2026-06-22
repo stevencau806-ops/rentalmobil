@@ -103,6 +103,18 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
   // Only from completed bookings (actual_return_date exists) with car that has commission
   const commissionData = useMemo(() => {
     const completedBookings = bookings.filter((b) => b.actual_return_date);
+
+    function calcDenda(b: typeof bookings[0]): number {
+      let denda = Number(b.late_fee || 0);
+      if (b.additional_fines) {
+        try {
+          const fines = JSON.parse(b.additional_fines) as { amount: number }[];
+          denda += fines.reduce((s, f) => s + (f.amount || 0), 0);
+        } catch { /* ignore */ }
+      }
+      return denda;
+    }
+
     const monthCommissions = completedBookings
       .filter((b) => {
         const d = new Date(b.actual_return_date!);
@@ -112,12 +124,18 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
         const car = cars.find((c) => c.id === b.car_id);
         const percent = car?.commission_percent ?? 0;
         const totalSewa = Number(b.total_cost);
-        const commissionAmount = Math.round(totalSewa * percent / 100);
+        const totalDenda = calcDenda(b);
+        const commissionSewa = Math.round(totalSewa * percent / 100);
+        const commissionDenda = Math.round(totalDenda * percent / 100);
+        const commissionAmount = commissionSewa + commissionDenda;
         return {
           booking: b,
           car,
           percent,
           totalSewa,
+          totalDenda,
+          commissionSewa,
+          commissionDenda,
           commissionAmount,
         };
       })
@@ -129,12 +147,18 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
         const car = cars.find((c) => c.id === b.car_id);
         const percent = car?.commission_percent ?? 0;
         const totalSewa = Number(b.total_cost);
-        const commissionAmount = Math.round(totalSewa * percent / 100);
+        const totalDenda = calcDenda(b);
+        const commissionSewa = Math.round(totalSewa * percent / 100);
+        const commissionDenda = Math.round(totalDenda * percent / 100);
+        const commissionAmount = commissionSewa + commissionDenda;
         return {
           booking: b,
           car,
           percent,
           totalSewa,
+          totalDenda,
+          commissionSewa,
+          commissionDenda,
           commissionAmount,
         };
       })
@@ -498,12 +522,21 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
                     </div>
                     <Badge tone="amber">{item.percent}%</Badge>
                   </div>
-                  <div className="mt-3 flex items-center justify-between rounded-lg bg-amber-50 px-3 py-2">
-                    <div className="text-xs text-slate-600">
-                      <p>Sewa: {formatRupiah(item.totalSewa)}</p>
-                      <p className="text-slate-400">{formatTanggal(item.booking.actual_return_date!)}</p>
+                  <div className="mt-3 rounded-lg bg-amber-50 px-3 py-2 space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-600">Sewa: {formatRupiah(item.totalSewa)}</span>
+                      <span className="font-semibold text-amber-700">{formatRupiah(item.commissionSewa)}</span>
                     </div>
-                    <p className="text-sm font-bold text-amber-700">{formatRupiah(item.commissionAmount)}</p>
+                    {item.totalDenda > 0 && (
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-red-600">Denda: {formatRupiah(item.totalDenda)}</span>
+                        <span className="font-semibold text-red-600">{formatRupiah(item.commissionDenda)}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between border-t border-amber-200 pt-1">
+                      <span className="text-xs text-slate-400">{formatTanggal(item.booking.actual_return_date!)}</span>
+                      <span className="text-sm font-bold text-amber-800">{formatRupiah(item.commissionAmount)}</span>
+                    </div>
                   </div>
                   {item.car?.commission_note && (
                     <p className="mt-2 text-xs text-slate-400">📝 {item.car.commission_note}</p>
@@ -525,15 +558,17 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
                         <th className="px-4 py-3">Mobil</th>
                         <th className="px-4 py-3">Tgl Kembali</th>
                         <th className="px-4 py-3 text-right">Biaya Sewa</th>
-                        <th className="px-4 py-3 text-center">Komisi</th>
-                        <th className="px-4 py-3 text-right">Jumlah Komisi</th>
-                        <th className="px-4 py-3">Keterangan</th>
+                        <th className="px-4 py-3 text-right">Denda</th>
+                        <th className="px-4 py-3 text-center">%</th>
+                        <th className="px-4 py-3 text-right">Komisi Sewa</th>
+                        <th className="px-4 py-3 text-right">Komisi Denda</th>
+                        <th className="px-4 py-3 text-right">Total Komisi</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {commissionData.monthCommissions.length === 0 ? (
                         <tr>
-                          <td colSpan={7} className="px-4 py-8 text-center text-slate-400">
+                          <td colSpan={9} className="px-4 py-8 text-center text-slate-400">
                             Tidak ada komisi pada bulan ini.
                           </td>
                         </tr>
@@ -544,7 +579,7 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
                               {item.booking.customers?.name}
                             </td>
                             <td className="px-4 py-3 text-slate-500">
-                              {item.car?.brand} {item.car?.model} · {item.car?.plate}
+                              {item.car?.brand} {item.car?.model}
                             </td>
                             <td className="px-4 py-3 text-xs text-slate-500">
                               {formatTanggal(item.booking.actual_return_date!)}
@@ -552,14 +587,20 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
                             <td className="px-4 py-3 text-right">
                               {formatRupiah(item.totalSewa)}
                             </td>
+                            <td className="px-4 py-3 text-right text-red-600">
+                              {item.totalDenda > 0 ? formatRupiah(item.totalDenda) : "-"}
+                            </td>
                             <td className="px-4 py-3 text-center">
                               <Badge tone="amber">{item.percent}%</Badge>
                             </td>
-                            <td className="px-4 py-3 text-right font-bold text-amber-700">
-                              {formatRupiah(item.commissionAmount)}
+                            <td className="px-4 py-3 text-right font-medium text-amber-700">
+                              {formatRupiah(item.commissionSewa)}
                             </td>
-                            <td className="px-4 py-3 text-xs text-slate-400">
-                              {item.car?.commission_note || "-"}
+                            <td className="px-4 py-3 text-right font-medium text-red-600">
+                              {item.commissionDenda > 0 ? formatRupiah(item.commissionDenda) : "-"}
+                            </td>
+                            <td className="px-4 py-3 text-right font-bold text-amber-800">
+                              {formatRupiah(item.commissionAmount)}
                             </td>
                           </tr>
                         ))
@@ -568,11 +609,16 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
                     {commissionData.monthCommissions.length > 0 && (
                       <tfoot>
                         <tr className="border-t-2 border-slate-200 bg-amber-50 font-bold">
-                          <td colSpan={5} className="px-4 py-3 text-right">TOTAL KOMISI</td>
+                          <td colSpan={6} className="px-4 py-3 text-right">TOTAL KOMISI</td>
+                          <td className="px-4 py-3 text-right text-amber-700">
+                            {formatRupiah(commissionData.monthCommissions.reduce((s, c) => s + c.commissionSewa, 0))}
+                          </td>
+                          <td className="px-4 py-3 text-right text-red-600">
+                            {formatRupiah(commissionData.monthCommissions.reduce((s, c) => s + c.commissionDenda, 0))}
+                          </td>
                           <td className="px-4 py-3 text-right text-amber-800">
                             {formatRupiah(commissionData.monthTotal)}
                           </td>
-                          <td></td>
                         </tr>
                       </tfoot>
                     )}
