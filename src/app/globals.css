@@ -45,6 +45,8 @@ body {
     padding: 0 !important;
     height: auto !important;
     overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   /* Remove sidebar offset */
@@ -54,16 +56,19 @@ body {
   }
 
   /* ===== NOTA PRINT (Booking page) ===== */
-  /* When #nota-print-area exists, hide everything else */
-  body:has(#nota-print-area) * {
+  /* Hide everything except nota - use class-based approach for mobile compatibility */
+  .printing-nota * {
     visibility: hidden !important;
   }
-  body:has(#nota-print-area) #nota-print-area,
-  body:has(#nota-print-area) #nota-print-area * {
+  .printing-nota #nota-print-area,
+  .printing-nota #nota-print-area * {
     visibility: visible !important;
   }
+
   #nota-print-area {
-    position: fixed !important;
+    display: block !important;
+    visibility: visible !important;
+    position: absolute !important;
     top: 0 !important;
     left: 0 !important;
     right: 0 !important;
@@ -73,6 +78,9 @@ body {
     font-size: 11px !important;
     line-height: 1.4 !important;
     z-index: 99999 !important;
+  }
+  #nota-print-area * {
+    visibility: visible !important;
   }
   #nota-print-area .h-24 {
     height: 3.5rem !important;

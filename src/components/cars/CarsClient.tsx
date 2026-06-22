@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Car as CarIcon } from "lucide-react";
+import { useState, useRef } from "react";
+import { Car as CarIcon, Upload, X, Loader2 } from "lucide-react";
 import type { Car, CarStatus } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { DataTable } from "@/components/ui/DataTable";
@@ -62,10 +62,14 @@ export function CarsClient({ initialCars }: CarsClientProps) {
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const toast = useToast();
 
   function openAdd() {
     setForm(emptyForm);
+    setPreviewUrl(null);
     setModalOpen(true);
   }
 
@@ -82,7 +86,41 @@ export function CarsClient({ initialCars }: CarsClientProps) {
       commission_percent: (car.commission_percent ?? 0).toString(),
       commission_note: car.commission_note ?? "",
     });
+    setPreviewUrl(car.photo_url ?? null);
     setModalOpen(true);
+  }
+
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const localUrl = URL.createObjectURL(file);
+    setPreviewUrl(localUrl);
+    setUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", "mobil");
+
+      const res = await fetch("/api/upload-image", { method: "POST", body: formData });
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast(data.error || "Gagal upload foto", "error");
+        setPreviewUrl(null);
+        return;
+      }
+
+      setForm((prev) => ({ ...prev, photo_url: data.url }));
+      setPreviewUrl(data.url);
+      toast("Foto berhasil diupload", "success");
+    } catch {
+      toast("Gagal upload foto", "error");
+      setPreviewUrl(null);
+    } finally {
+      setUploading(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -297,13 +335,56 @@ export function CarsClient({ initialCars }: CarsClientProps) {
               hint="Status otomatis dari booking. Bisa di-override manual di tabel."
             />
           </div>
-          <Input
-            label="URL Foto Mobil (opsional)"
-            value={form.photo_url}
-            onChange={(e) => setForm({ ...form, photo_url: e.target.value })}
-            placeholder="https://..."
-            hint="Tempel URL gambar mobil. Kosongkan untuk ikon default."
-          />
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              Foto Mobil
+            </label>
+            <div className="flex items-start gap-3">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handlePhotoUpload}
+                className="hidden"
+              />
+              <button
+                type="button"
+                className="border-2 border-dashed border-slate-300 rounded-lg p-3 text-center hover:border-blue-400 hover:bg-blue-50/50 transition-colors cursor-pointer flex flex-col items-center gap-1 w-28 h-20"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+              >
+                {uploading ? (
+                  <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
+                ) : (
+                  <Upload className="h-5 w-5 text-slate-400" />
+                )}
+                <span className="text-xs text-slate-500">
+                  {uploading ? "Upload..." : "Upload"}
+                </span>
+              </button>
+              {previewUrl && (
+                <div className="relative w-28 h-20 rounded-lg overflow-hidden border border-slate-200">
+                  <img
+                    src={previewUrl}
+                    alt="Preview"
+                    className="w-full h-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600"
+                    onClick={() => {
+                      setPreviewUrl(null);
+                      setForm((prev) => ({ ...prev, photo_url: "" }));
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-slate-400 mt-1">JPG, PNG, WebP. Auto-compress saat upload.</p>
+          </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input
               label="Komisi (%)"

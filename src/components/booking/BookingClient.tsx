@@ -814,7 +814,13 @@ export function BookingClient({
                 Share WA
               </span>
             </Button>
-            <Button onClick={() => window.print()}>
+            <Button onClick={() => {
+              document.body.classList.add("printing-nota");
+              setTimeout(() => {
+                window.print();
+                document.body.classList.remove("printing-nota");
+              }, 100);
+            }}>
               <span className="inline-flex items-center gap-1.5">
                 <Printer className="h-4 w-4" />
                 Cetak / PDF
