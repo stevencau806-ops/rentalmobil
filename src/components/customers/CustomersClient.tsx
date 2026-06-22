@@ -114,27 +114,26 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
   async function extractKtpData(file: File) {
     setExtracting(true);
     try {
-      // Try api.co.id first (if configured & has balance)
-      const apiResult = await tryApiExtract(file);
-      if (apiResult) {
-        setForm((prev) => ({
-          ...prev,
-          nik: apiResult.nik || prev.nik,
-          name: apiResult.nama || prev.name,
-          address: buildAddress(apiResult) || prev.address,
-        }));
-        toast("Data KTP berhasil di-extract", "success");
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/ocr-ktp", { method: "POST", body: formData });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        console.warn("OCR error:", errData);
+        toast("Gagal membaca data KTP. Silakan isi manual.", "error");
         return;
       }
 
-      // Fallback: Google Cloud Vision OCR (free 1000/bulan)
-      const visionResult = await tryVisionExtract(file);
-      if (visionResult && (visionResult.nik || visionResult.nama)) {
+      const data = await res.json();
+
+      if (data.nik || data.nama) {
         setForm((prev) => ({
           ...prev,
-          nik: visionResult.nik || prev.nik,
-          name: visionResult.nama || prev.name,
-          address: visionResult.alamat || prev.address,
+          nik: data.nik || prev.nik,
+          name: data.nama || prev.name,
+          address: data.alamat || prev.address,
         }));
         toast("Data KTP berhasil dibaca", "success");
       } else {
@@ -145,44 +144,6 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
     } finally {
       setExtracting(false);
     }
-  }
-
-  async function tryApiExtract(file: File): Promise<Record<string, string> | null> {
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch("/api/extract-ktp", { method: "POST", body: formData });
-      if (!res.ok) return null;
-      return await res.json();
-    } catch {
-      return null;
-    }
-  }
-
-  async function tryVisionExtract(file: File): Promise<{ nik: string; nama: string; alamat: string } | null> {
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch("/api/ocr-ktp", { method: "POST", body: formData });
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        console.error("Vision OCR error:", errData);
-        return null;
-      }
-      return await res.json();
-    } catch (e) {
-      console.error("Vision OCR fetch error:", e);
-      return null;
-    }
-  }
-
-  function buildAddress(data: Record<string, string>): string {
-    const parts: string[] = [];
-    if (data.alamat) parts.push(data.alamat);
-    if (data.rt_rw) parts.push(`RT/RW ${data.rt_rw}`);
-    if (data.kelurahan) parts.push(`Kel. ${data.kelurahan}`);
-    if (data.kecamatan) parts.push(`Kec. ${data.kecamatan}`);
-    return parts.join(", ");
   }
 
   async function handleSubmit(e: React.FormEvent) {

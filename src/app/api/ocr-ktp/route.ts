@@ -9,74 +9,67 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "File tidak ditemukan" }, { status: 400 });
     }
 
-    const apiKey = process.env.GOOGLE_CLOUD_VISION_API_KEY || process.env.GOOGLE_VISION_API_KEY || process.env.VISION_API_KEY;
+    const apiKey = process.env.OCR_SPACE_API_KEY;
     if (!apiKey) {
-      console.error("GOOGLE_CLOUD_VISION_API_KEY is not set. Available env keys:", Object.keys(process.env).filter(k => k.includes("GOOGLE") || k.includes("VISION")).join(", "));
       return NextResponse.json(
-        { error: "Google Cloud Vision API key belum dikonfigurasi" },
+        { error: "OCR API key belum dikonfigurasi" },
         { status: 500 }
       );
     }
 
-    console.log("Vision API key exists, length:", apiKey.length);
+    // Send to OCR.space API
+    const ocrForm = new FormData();
+    ocrForm.append("file", file);
+    ocrForm.append("language", "ind"); // Indonesian
+    ocrForm.append("isOverlayRequired", "false");
+    ocrForm.append("OCREngine", "2"); // Engine 2 lebih akurat untuk dokumen
 
-    // Convert file to base64
-    const bytes = await file.arrayBuffer();
-    const base64 = Buffer.from(bytes).toString("base64");
-    console.log("Image base64 length:", base64.length);
+    const ocrRes = await fetch("https://api.ocr.space/parse/image", {
+      method: "POST",
+      headers: {
+        apikey: apiKey,
+      },
+      body: ocrForm,
+    });
 
-    // Call Google Cloud Vision API
-    const visionUrl = `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`;
-    console.log("Calling Vision API...");
-
-    const visionRes = await fetch(visionUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          requests: [
-            {
-              image: { content: base64 },
-              features: [{ type: "TEXT_DETECTION" }],
-            },
-          ],
-        }),
-      }
-    );
-
-    if (!visionRes.ok) {
-      const errText = await visionRes.text();
-      console.error("Google Vision error status:", visionRes.status);
-      console.error("Google Vision error body:", errText);
+    if (!ocrRes.ok) {
+      const errText = await ocrRes.text();
+      console.error("OCR.space error:", ocrRes.status, errText);
       return NextResponse.json(
-        { error: `Gagal membaca teks dari foto KTP (${visionRes.status})`, detail: errText },
+        { error: "Gagal membaca teks dari foto KTP" },
         { status: 500 }
       );
     }
 
-    const visionData = await visionRes.json();
-    console.log("Vision API success, annotations count:", visionData.responses?.[0]?.textAnnotations?.length || 0);
-    const annotations = visionData.responses?.[0]?.textAnnotations;
+    const ocrData = await ocrRes.json();
 
-    if (!annotations || annotations.length === 0) {
+    if (ocrData.IsErroredOnProcessing) {
+      console.error("OCR.space processing error:", ocrData.ErrorMessage);
+      return NextResponse.json(
+        { error: "Gagal memproses foto KTP" },
+        { status: 500 }
+      );
+    }
+
+    const fullText = ocrData.ParsedResults?.[0]?.ParsedText || "";
+    console.log("OCR.space text:", fullText);
+
+    if (!fullText.trim()) {
       return NextResponse.json(
         { error: "Tidak ada teks yang terdeteksi di foto" },
         { status: 400 }
       );
     }
 
-    // Full text from the image
-    const fullText = annotations[0].description || "";
-    console.log("Vision OCR text:", fullText);
-
-    // Parse KTP data from text
+    // Parse KTP data from OCR text
     const result = parseKtpText(fullText);
 
     return NextResponse.json(result);
   } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : String(err);
-    console.error("OCR KTP error:", errorMessage);
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("OCR KTP error:", msg);
     return NextResponse.json(
-      { error: `Terjadi kesalahan: ${errorMessage}` },
+      { error: `Terjadi kesalahan: ${msg}` },
       { status: 500 }
     );
   }
@@ -88,13 +81,12 @@ function parseKtpText(text: string): { nik: string; nama: string; alamat: string
   // Extract NIK (16 digits)
   let nik = "";
   for (const line of lines) {
-    // Look for line with NIK label or just 16 digits
     const nikMatch = line.match(/(\d{16})/);
     if (nikMatch) {
       nik = nikMatch[1];
       break;
     }
-    // Sometimes digits have spaces: "3211 0824 0398 0001"
+    // Sometimes digits have spaces or dots
     const digits = line.replace(/[^0-9]/g, "");
     if (digits.length === 16 && /NIK|^\d/.test(line)) {
       nik = digits;
@@ -112,10 +104,9 @@ function parseKtpText(text: string): { nik: string; nama: string; alamat: string
       nama = namaMatch[1].trim();
       break;
     }
-    // Pattern: line starts with "Nama" and value is on same line after colon
+    // Pattern: line is just "Nama" and next line is value
     if (/^Nama$/i.test(line) && i + 1 < lines.length) {
       const nextLine = lines[i + 1];
-      // Next line should be the name (not another label)
       if (!/^(Tempat|NIK|Alamat|Jenis|Agama|Status|Pekerjaan)/i.test(nextLine)) {
         nama = nextLine.replace(/^[:\-]\s*/, "").trim();
         break;
@@ -123,8 +114,8 @@ function parseKtpText(text: string): { nik: string; nama: string; alamat: string
     }
   }
 
-  // If nama contains "Tempat" or "Lahir", it picked up wrong line
-  if (/tempat|lahir|kelamin/i.test(nama)) {
+  // Clean nama - remove non-alpha chars
+  if (nama && /tempat|lahir|kelamin/i.test(nama)) {
     nama = "";
   }
 
@@ -135,10 +126,6 @@ function parseKtpText(text: string): { nik: string; nama: string; alamat: string
     const alamatMatch = line.match(/^Alamat\s*[:\-]\s*(.+)/i);
     if (alamatMatch) {
       alamat = alamatMatch[1].trim();
-      // Sometimes address continues on next line
-      if (i + 1 < lines.length && !/^(RT|Kel|Kec|Agama|Status|Pekerjaan)/i.test(lines[i + 1])) {
-        alamat += " " + lines[i + 1].trim();
-      }
       break;
     }
     if (/^Alamat$/i.test(line) && i + 1 < lines.length) {
