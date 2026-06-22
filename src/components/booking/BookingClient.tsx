@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Trash2, TriangleAlert, Check, Printer, Plus } from "lucide-react";
+import { Trash2, TriangleAlert, Check, Printer, Plus, Eye } from "lucide-react";
 import type { Booking, Car, Customer, AdditionalFine, FineType } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { DataTable } from "@/components/ui/DataTable";
@@ -77,6 +77,7 @@ export function BookingClient({
   const [processingReturn, setProcessingReturn] = useState(false);
 
   const [notaBooking, setNotaBooking] = useState<Booking | null>(null);
+  const [detailBooking, setDetailBooking] = useState<Booking | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -420,6 +421,9 @@ export function BookingClient({
               Selesaikan
             </Button>
           )}
+          <Button size="sm" variant="outline" onClick={() => setDetailBooking(b)}>
+            <Eye className="h-3.5 w-3.5 mr-1" />Detail
+          </Button>
           <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700" onClick={() => setNotaBooking(b)}>
             Nota
           </Button>
@@ -514,6 +518,9 @@ export function BookingClient({
                     Selesaikan
                   </Button>
                 )}
+                <Button size="sm" variant="outline" onClick={() => setDetailBooking(b)}>
+                  <Eye className="h-3.5 w-3.5" />
+                </Button>
                 <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700" onClick={() => setNotaBooking(b)}>
                   Nota
                 </Button>
@@ -798,6 +805,114 @@ export function BookingClient({
             </div>
           </form>
         )}
+      </Modal>
+
+      {/* Detail Modal */}
+      <Modal open={!!detailBooking} onClose={() => setDetailBooking(null)} title="Detail Booking" size="lg">
+        {detailBooking && (() => {
+          const b = detailBooking;
+          const lateFee = Number(b.late_fee || 0);
+          let fines: AdditionalFine[] = [];
+          try { fines = b.additional_fines ? JSON.parse(b.additional_fines) : []; } catch { /* */ }
+          const finesTotal = fines.reduce((s, f) => s + (f.amount || 0), 0);
+          const grandTotal = Number(b.total_cost) + lateFee + finesTotal;
+
+          return (
+            <div className="space-y-4 text-sm">
+              {/* Status */}
+              <div className="flex items-center gap-2">
+                <Badge tone={b.payment_status === "paid" ? "green" : "amber"}>
+                  {b.payment_status === "paid" ? "LUNAS" : "BELUM BAYAR"}
+                </Badge>
+                {b.actual_return_date && <Badge tone="gray">Selesai</Badge>}
+                {!b.actual_return_date && <Badge tone="blue">Sedang Berjalan</Badge>}
+              </div>
+
+              {/* Customer & Car */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="rounded-lg border border-slate-200 p-3">
+                  <p className="text-xs font-semibold uppercase text-slate-400 mb-1">Pelanggan</p>
+                  <p className="font-semibold">{b.customers?.name ?? "-"}</p>
+                  <p className="text-xs text-slate-500">NIK: {b.customers?.nik ?? "-"}</p>
+                  <p className="text-xs text-slate-500">HP: {b.customers?.phone ?? "-"}</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 p-3">
+                  <p className="text-xs font-semibold uppercase text-slate-400 mb-1">Kendaraan</p>
+                  <p className="font-semibold">{b.cars?.brand} {b.cars?.model}</p>
+                  <p className="text-xs text-slate-500">Plat: {b.cars?.plate ?? "-"}</p>
+                  <p className="text-xs text-slate-500">Tarif: {formatRupiah(b.cars?.tariff_per_day ?? 0)}/hari</p>
+                </div>
+              </div>
+
+              {/* Dates */}
+              <div className="rounded-lg border border-slate-200 p-3">
+                <p className="text-xs font-semibold uppercase text-slate-400 mb-2">Periode Sewa</p>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-slate-400">Mulai:</span>
+                    <p className="font-medium">{formatTanggal(b.start_date)}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Selesai:</span>
+                    <p className="font-medium">{formatTanggal(b.end_date)}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Durasi:</span>
+                    <p className="font-medium">{b.duration_days} hari</p>
+                  </div>
+                  {b.actual_return_date && (
+                    <div>
+                      <span className="text-slate-400">Dikembalikan:</span>
+                      <p className="font-medium">{formatTanggalWaktu(b.actual_return_date)}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Rincian Biaya */}
+              <div className="rounded-lg border border-slate-200 p-3">
+                <p className="text-xs font-semibold uppercase text-slate-400 mb-2">Rincian Biaya</p>
+                <div className="space-y-1.5">
+                  <div className="flex justify-between">
+                    <span>Sewa ({b.duration_days} hari × {formatRupiah(b.cars?.tariff_per_day ?? 0)})</span>
+                    <span className="font-medium">{formatRupiah(Number(b.total_cost))}</span>
+                  </div>
+                  {lateFee > 0 && (
+                    <div className="flex justify-between text-red-600">
+                      <span>Denda Keterlambatan</span>
+                      <span className="font-medium">{formatRupiah(lateFee)}</span>
+                    </div>
+                  )}
+                  {fines.map((f, i) => (
+                    <div key={i} className="flex justify-between text-red-600">
+                      <span>Denda: {f.label || f.type}</span>
+                      <span className="font-medium">{formatRupiah(f.amount)}</span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between border-t border-slate-200 pt-2 font-bold">
+                    <span>TOTAL</span>
+                    <span>{formatRupiah(grandTotal)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Notes */}
+              {b.notes && (
+                <div className="rounded-lg bg-slate-50 p-3">
+                  <p className="text-xs font-semibold uppercase text-slate-400 mb-1">Catatan</p>
+                  <p className="text-slate-600">{b.notes}</p>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setDetailBooking(null)}>Tutup</Button>
+                <Button className="bg-blue-600 text-white hover:bg-blue-700" onClick={() => { setDetailBooking(null); setNotaBooking(b); }}>
+                  Lihat Nota
+                </Button>
+              </div>
+            </div>
+          );
+        })()}
       </Modal>
 
       {/* Nota Modal */}
