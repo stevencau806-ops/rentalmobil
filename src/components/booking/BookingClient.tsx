@@ -815,11 +815,45 @@ export function BookingClient({
               </span>
             </Button>
             <Button onClick={() => {
-              document.body.classList.add("printing-nota");
-              setTimeout(() => {
-                window.print();
-                document.body.classList.remove("printing-nota");
-              }, 100);
+              const notaEl = document.getElementById("nota-print-area");
+              if (!notaEl) return;
+              const printWindow = window.open("", "_blank");
+              if (!printWindow) {
+                // Fallback if popup blocked
+                document.body.classList.add("printing-nota");
+                setTimeout(() => { window.print(); document.body.classList.remove("printing-nota"); }, 100);
+                return;
+              }
+              printWindow.document.write(`<!DOCTYPE html><html><head><title>Nota Sewa</title><style>
+                body { font-family: system-ui, -apple-system, sans-serif; padding: 8mm; font-size: 12px; line-height: 1.5; color: #1e293b; }
+                * { box-sizing: border-box; }
+                .flex { display: flex; } .flex-col { flex-direction: column; } .items-center { align-items: center; } .justify-between { justify-content: space-between; }
+                .grid { display: grid; } .grid-cols-2 { grid-template-columns: repeat(2, 1fr); } .gap-4 { gap: 1rem; }
+                .text-center { text-align: center; } .text-right { text-align: right; } .text-left { text-align: left; }
+                .font-bold { font-weight: 700; } .font-semibold { font-weight: 600; } .font-medium { font-weight: 500; } .font-mono { font-family: monospace; }
+                .text-lg { font-size: 14px; } .text-sm { font-size: 11px; } .text-xs { font-size: 10px; } .text-\\[11px\\] { font-size: 9.5px; }
+                .uppercase { text-transform: uppercase; } .tracking-wide { letter-spacing: 0.05em; }
+                .text-slate-400 { color: #94a3b8; } .text-slate-500 { color: #64748b; } .text-slate-600 { color: #475569; } .text-slate-700 { color: #334155; } .text-slate-900 { color: #0f172a; }
+                .text-red-600 { color: #dc2626; } .text-amber-700 { color: #b45309; } .text-emerald-700 { color: #047857; }
+                .bg-emerald-100 { background: #d1fae5; } .bg-amber-100 { background: #fef3c7; } .bg-slate-50 { background: #f8fafc; }
+                .border-b { border-bottom: 1px solid #e2e8f0; } .border-b-2 { border-bottom: 2px solid #1e3a5f; } .border-t-2 { border-top: 2px solid #cbd5e1; } .border-t { border-top: 1px solid #e2e8f0; }
+                .border { border: 1px solid #e2e8f0; } .border-slate-200 { border-color: #e2e8f0; } .border-slate-400 { border-color: #94a3b8; }
+                .rounded-lg { border-radius: 0.5rem; } .rounded { border-radius: 0.25rem; }
+                .p-3 { padding: 0.75rem; } .p-4 { padding: 1rem; } .p-6 { padding: 1.5rem; } .px-2 { padding: 0 0.5rem; } .px-4 { padding: 0 1rem; } .py-1 { padding: 0.25rem 0; } .py-2 { padding: 0.5rem 0; } .py-3 { padding: 0.75rem 0; }
+                .pb-4 { padding-bottom: 1rem; } .pt-4 { padding-top: 1rem; } .pl-4 { padding-left: 1rem; }
+                .mt-1 { margin-top: 0.25rem; } .mt-2 { margin-top: 0.5rem; } .mt-4 { margin-top: 1rem; } .mt-5 { margin-top: 1.25rem; } .mt-6 { margin-top: 1.5rem; } .mt-8 { margin-top: 2rem; } .mt-16 { margin-top: 4rem; } .mb-1 { margin-bottom: 0.25rem; } .mb-2 { margin-bottom: 0.5rem; }
+                .w-full { width: 100%; } .w-32 { width: 8rem; } .h-24 { height: 5rem; }
+                .object-contain { object-fit: contain; } .w-auto { width: auto; }
+                .divide-y > * + * { border-top: 1px solid #f1f5f9; }
+                .space-y-1 > * + * { margin-top: 0.25rem; }
+                .list-decimal { list-style-type: decimal; }
+                .leading-relaxed { line-height: 1.625; }
+                .inline-flex { display: inline-flex; }
+                table { width: 100%; border-collapse: collapse; }
+                @media print { body { padding: 0; } @page { size: A4; margin: 10mm; } }
+              </style></head><body>${notaEl.outerHTML}</body></html>`);
+              printWindow.document.close();
+              printWindow.onload = () => { printWindow.print(); printWindow.close(); };
             }}>
               <span className="inline-flex items-center gap-1.5">
                 <Printer className="h-4 w-4" />
