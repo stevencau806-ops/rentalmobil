@@ -18,13 +18,13 @@ export async function POST(req: NextRequest) {
     }
 
     // Forward file to api.co.id KTP extractor
-    // Try with field name "image" (common for OCR APIs)
     const extractForm = new FormData();
-    extractForm.append("image", file);
+    extractForm.append("file", file);
 
-    const extractRes = await fetch("https://api.co.id/v1/ktp-extractor", {
+    const extractRes = await fetch("https://use.api.co.id/ocr/ktp-extract", {
       method: "POST",
       headers: {
+        "accept": "application/json",
         "x-api-co-id": apiKey,
       },
       body: extractForm,
@@ -35,7 +35,6 @@ export async function POST(req: NextRequest) {
     console.log("api.co.id response body:", responseText);
 
     if (!extractRes.ok) {
-      // Return the actual error from the API for debugging
       return NextResponse.json(
         { 
           error: `Gagal extract data KTP (${extractRes.status}). Silakan isi data manual.`,
@@ -55,7 +54,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Normalize response - api.co.id may return data in different structures
+    // Normalize response - handle various response structures
     const extracted = result.data || result.result || result;
 
     return NextResponse.json({
