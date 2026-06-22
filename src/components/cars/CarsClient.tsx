@@ -99,8 +99,11 @@ export function CarsClient({ initialCars }: CarsClientProps) {
     setUploading(true);
 
     try {
+      // Compress image client-side first
+      const compressed = await compressImage(file, 1200, 0.75);
+
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", compressed);
       formData.append("folder", "mobil");
 
       const res = await fetch("/api/upload-image", { method: "POST", body: formData });
@@ -121,6 +124,38 @@ export function CarsClient({ initialCars }: CarsClientProps) {
     } finally {
       setUploading(false);
     }
+  }
+
+  /** Compress image client-side using canvas */
+  async function compressImage(file: File, maxWidth: number, quality: number): Promise<File> {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let { width, height } = img;
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve(new File([blob], file.name.replace(/\.\w+$/, ".jpg"), { type: "image/jpeg" }));
+            } else {
+              resolve(file);
+            }
+          },
+          "image/jpeg",
+          quality
+        );
+      };
+      img.onerror = () => resolve(file);
+      img.src = URL.createObjectURL(file);
+    });
   }
 
   async function handleSubmit(e: React.FormEvent) {

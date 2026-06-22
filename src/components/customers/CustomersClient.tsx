@@ -84,8 +84,11 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
     // Upload to Cloudinary
     setUploading(true);
     try {
+      // Compress image client-side first (max 1200px, quality 0.7)
+      const compressed = await compressImage(file, 1200, 0.7);
+
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", compressed);
 
       const res = await fetch("/api/upload-ktp", { method: "POST", body: formData });
       const data = await res.json();
@@ -109,6 +112,42 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
     } finally {
       setUploading(false);
     }
+  }
+
+  /** Compress image client-side using canvas - works on all mobile browsers */
+  async function compressImage(file: File, maxWidth: number, quality: number): Promise<File> {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let { width, height } = img;
+
+        // Resize if wider than maxWidth
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve(new File([blob], file.name.replace(/\.\w+$/, ".jpg"), { type: "image/jpeg" }));
+            } else {
+              resolve(file); // fallback to original
+            }
+          },
+          "image/jpeg",
+          quality
+        );
+      };
+      img.onerror = () => resolve(file); // fallback
+      img.src = URL.createObjectURL(file);
+    });
   }
 
   async function extractKtpData(cloudinaryUrl: string) {
