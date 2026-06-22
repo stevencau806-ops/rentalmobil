@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { X, Download, Share2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { X, Download, Share2, MoreVertical } from "lucide-react";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -10,113 +10,101 @@ interface BeforeInstallPromptEvent extends Event {
 
 export function PWAInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [showPrompt, setShowPrompt] = useState(false);
-  const [showManual, setShowManual] = useState(false);
+  const [show, setShow] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
 
-  const checkShouldShow = useCallback(() => {
-    // Already installed (standalone mode)
-    const standalone = window.matchMedia("(display-mode: standalone)").matches
-      || (window.navigator as unknown as { standalone?: boolean }).standalone === true;
-    if (standalone) return false;
-
-    // Dismissed recently (3 days cooldown)
-    const dismissed = localStorage.getItem("pwa-dismiss");
-    if (dismissed && Date.now() - Number(dismissed) < 3 * 24 * 60 * 60 * 1000) return false;
-
-    return true;
-  }, []);
-
   useEffect(() => {
-    if (!checkShouldShow()) return;
+    // Already installed
+    const isStandalone = window.matchMedia("(display-mode: standalone)").matches
+      || (window.navigator as unknown as { standalone?: boolean }).standalone === true;
+    if (isStandalone) return;
 
-    // Detect iOS
+    // Dismissed recently
+    const dismissed = localStorage.getItem("pwa-no");
+    if (dismissed && Date.now() - Number(dismissed) < 3 * 24 * 60 * 60 * 1000) return;
+
     const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     setIsIOS(iOS);
 
-    // Listen for Chrome/Android install prompt
+    // Listen for native install prompt
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
     };
     window.addEventListener("beforeinstallprompt", handler);
 
-    // Show after short delay
-    const timer = setTimeout(() => setShowPrompt(true), 2500);
+    // Show after delay
+    setTimeout(() => setShow(true), 3000);
 
-    return () => {
-      window.removeEventListener("beforeinstallprompt", handler);
-      clearTimeout(timer);
-    };
-  }, [checkShouldShow]);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
 
   async function handleInstall() {
     if (deferredPrompt) {
-      await deferredPrompt.prompt();
-      await deferredPrompt.userChoice;
+      try {
+        await deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === "accepted") { setShow(false); return; }
+      } catch { /* ignore */ }
       setDeferredPrompt(null);
-      setShowPrompt(false);
-    } else {
-      // No native prompt available - show manual instructions
-      setShowManual(true);
     }
+    // If no native prompt or user dismissed, just hide
+    setShow(false);
+    localStorage.setItem("pwa-no", Date.now().toString());
   }
 
-  function handleDismiss() {
-    setShowPrompt(false);
-    localStorage.setItem("pwa-dismiss", Date.now().toString());
+  function dismiss() {
+    setShow(false);
+    localStorage.setItem("pwa-no", Date.now().toString());
   }
 
-  if (!showPrompt) return null;
+  if (!show) return null;
+
+  const hasNativePrompt = !!deferredPrompt;
 
   return (
-    <div className="fixed bottom-4 left-3 right-3 z-[9999] sm:left-auto sm:right-4 sm:w-80 animate-slide-up">
-      <div className="rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden">
-        {/* Top bar */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-800 px-4 py-2.5 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Download className="h-4 w-4 text-white" />
-            <span className="text-white text-xs font-medium">Install Aplikasi</span>
-          </div>
-          <button onClick={handleDismiss} className="text-white/70 hover:text-white">
+    <div className="fixed bottom-4 left-3 right-3 z-[9999] sm:left-auto sm:right-4 sm:max-w-sm animate-slide-up">
+      <div className="rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
+        <div className="bg-blue-700 px-4 py-2 flex items-center justify-between">
+          <span className="text-white text-xs font-medium flex items-center gap-1.5">
+            <Download className="h-3.5 w-3.5" /> Install Aplikasi
+          </span>
+          <button onClick={dismiss} className="text-white/70 hover:text-white p-0.5">
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="p-4">
-          <div className="flex items-center gap-3">
+        <div className="p-3">
+          <div className="flex items-center gap-3 mb-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="https://res.cloudinary.com/dfxc4ceya/image/upload/w_96,h_96,c_fill/v1782120655/icon-512x512_tuodrb.png"
-              alt="App"
-              className="w-11 h-11 rounded-xl"
-            />
-            <div className="flex-1">
-              <p className="font-semibold text-slate-900 text-sm">Erlangga Rental Mobil</p>
-              <p className="text-[11px] text-slate-500">Akses cepat dari home screen</p>
+            <img src="/icon-192x192.png" alt="" className="w-10 h-10 rounded-xl" />
+            <div>
+              <p className="font-semibold text-sm text-slate-900">Erlangga Rental</p>
+              <p className="text-[10px] text-slate-500">Akses cepat dari home screen</p>
             </div>
           </div>
 
-          {isIOS || showManual ? (
-            <div className="mt-3 bg-slate-50 rounded-lg p-2.5">
-              <p className="text-[11px] text-slate-600 flex items-start gap-2">
-                <Share2 className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
-                <span>
-                  {isIOS
-                    ? <>Tap <strong>Share</strong> (ikon kotak + panah) di bawah, lalu pilih <strong>&quot;Add to Home Screen&quot;</strong></>
-                    : <>Tap menu <strong>&#8942;</strong> (titik tiga) di kanan atas browser, lalu pilih <strong>&quot;Install app&quot;</strong> atau <strong>&quot;Add to Home Screen&quot;</strong></>
-                  }
-                </span>
-              </p>
-            </div>
-          ) : (
+          {hasNativePrompt ? (
             <button
               onClick={handleInstall}
-              className="mt-3 w-full rounded-lg bg-blue-600 py-2.5 text-sm font-medium text-white hover:bg-blue-700 active:bg-blue-800 transition-colors flex items-center justify-center gap-2"
+              className="w-full rounded-lg bg-blue-600 py-2.5 text-sm font-medium text-white hover:bg-blue-700 flex items-center justify-center gap-2"
             >
-              <Download className="h-4 w-4" />
-              Install Sekarang
+              <Download className="h-4 w-4" /> Install
             </button>
+          ) : (
+            <div className="bg-slate-50 rounded-lg p-2.5 text-[11px] text-slate-600">
+              {isIOS ? (
+                <p className="flex items-start gap-2">
+                  <Share2 className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
+                  <span>Tap <strong>Share</strong> di bawah → <strong>&quot;Add to Home Screen&quot;</strong></span>
+                </p>
+              ) : (
+                <p className="flex items-start gap-2">
+                  <MoreVertical className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
+                  <span>Tap <strong>&#8942;</strong> di kanan atas → <strong>&quot;Install app&quot;</strong> atau <strong>&quot;Add to Home Screen&quot;</strong></span>
+                </p>
+              )}
+            </div>
           )}
         </div>
       </div>
