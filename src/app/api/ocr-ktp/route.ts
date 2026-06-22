@@ -9,9 +9,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "File tidak ditemukan" }, { status: 400 });
     }
 
-    const apiKey = process.env.GOOGLE_CLOUD_VISION_API_KEY;
+    const apiKey = process.env.GOOGLE_CLOUD_VISION_API_KEY || process.env.GOOGLE_VISION_API_KEY || process.env.VISION_API_KEY;
     if (!apiKey) {
-      console.error("GOOGLE_CLOUD_VISION_API_KEY is not set");
+      console.error("GOOGLE_CLOUD_VISION_API_KEY is not set. Available env keys:", Object.keys(process.env).filter(k => k.includes("GOOGLE") || k.includes("VISION")).join(", "));
       return NextResponse.json(
         { error: "Google Cloud Vision API key belum dikonfigurasi" },
         { status: 500 }

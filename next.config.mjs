@@ -13,6 +13,9 @@ const nextConfig = {
       { protocol: "http", hostname: "**" },
     ],
   },
+  env: {
+    GOOGLE_CLOUD_VISION_API_KEY: process.env.GOOGLE_CLOUD_VISION_API_KEY,
+  },
 };
 
 export default nextConfig;
