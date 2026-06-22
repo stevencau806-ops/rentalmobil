@@ -11,20 +11,25 @@ export async function POST(req: NextRequest) {
 
     const apiKey = process.env.GOOGLE_CLOUD_VISION_API_KEY;
     if (!apiKey) {
+      console.error("GOOGLE_CLOUD_VISION_API_KEY is not set");
       return NextResponse.json(
         { error: "Google Cloud Vision API key belum dikonfigurasi" },
         { status: 500 }
       );
     }
 
+    console.log("Vision API key exists, length:", apiKey.length);
+
     // Convert file to base64
     const bytes = await file.arrayBuffer();
     const base64 = Buffer.from(bytes).toString("base64");
+    console.log("Image base64 length:", base64.length);
 
     // Call Google Cloud Vision API
-    const visionRes = await fetch(
-      `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`,
-      {
+    const visionUrl = `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`;
+    console.log("Calling Vision API...");
+
+    const visionRes = await fetch(visionUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -40,14 +45,16 @@ export async function POST(req: NextRequest) {
 
     if (!visionRes.ok) {
       const errText = await visionRes.text();
-      console.error("Google Vision error:", visionRes.status, errText);
+      console.error("Google Vision error status:", visionRes.status);
+      console.error("Google Vision error body:", errText);
       return NextResponse.json(
-        { error: "Gagal membaca teks dari foto KTP" },
+        { error: `Gagal membaca teks dari foto KTP (${visionRes.status})`, detail: errText },
         { status: 500 }
       );
     }
 
     const visionData = await visionRes.json();
+    console.log("Vision API success, annotations count:", visionData.responses?.[0]?.textAnnotations?.length || 0);
     const annotations = visionData.responses?.[0]?.textAnnotations;
 
     if (!annotations || annotations.length === 0) {
