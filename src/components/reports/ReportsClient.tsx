@@ -237,61 +237,104 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
       {/* ===== Monthly ===== */}
       {tab === "monthly" && (
         <div className="space-y-4">
-          <h2 className="text-lg font-bold text-slate-900">
-            Laporan Pendapatan — {namaBulan[month]} {year}
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold text-slate-900">
+              Laporan — {namaBulan[month]} {year}
+            </h2>
+            <p className="text-xs text-slate-400">
+              Data dari booking yang sudah selesai
+            </p>
+          </div>
 
-          {/* Stat Cards: Pendapatan, Laba Bersih (tengah), Pengeluaran */}
+          {/* Stat Cards with hints */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <StatCard label="Pendapatan" value={formatRupiah(monthRevenue)} icon="💰" tone="green" />
+            <StatCard
+              label="Pendapatan"
+              value={formatRupiah(monthRevenue)}
+              icon="💰"
+              tone="green"
+              hint={monthBookings.length > 0 ? `${monthBookings.length} transaksi` : "Belum ada transaksi"}
+            />
             <StatCard
               label="Laba Bersih"
               value={formatRupiah(monthNetProfit)}
               icon="📈"
               tone={monthNetProfit >= 0 ? "blue" : "red"}
+              hint="Pendapatan - Pengeluaran - Komisi"
             />
-            <StatCard label="Pengeluaran" value={formatRupiah(monthExpenses)} icon="💸" tone="red" />
+            <StatCard
+              label="Pengeluaran"
+              value={formatRupiah(monthExpenses)}
+              icon="💸"
+              tone="red"
+              hint="Service, pajak, BBM, dll"
+            />
           </div>
 
-          {/* Mobile: Pendapatan Admin % card (di atas list booking) */}
+          {/* Keterangan ringkas */}
+          <div className="rounded-xl bg-blue-50 border border-blue-200 p-3 text-xs text-blue-700">
+            <p className="font-semibold mb-1">Cara baca laporan:</p>
+            <ul className="list-disc pl-4 space-y-0.5 text-blue-600">
+              <li><strong>Pendapatan</strong> = total uang masuk dari sewa + denda</li>
+              <li><strong>Pengeluaran</strong> = biaya service, pajak, dll</li>
+              <li><strong>Laba Bersih</strong> = Pendapatan - Pengeluaran - Komisi pemilik mobil</li>
+            </ul>
+          </div>
+
+          {/* Mobile: Pendapatan Admin % card */}
           {commissionData.monthCommissions.length > 0 && (
             <div className="md:hidden rounded-2xl bg-gradient-to-br from-violet-50 to-purple-100 p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase text-violet-600">Pendapatan Admin %</p>
                   <p className="mt-1 text-2xl font-bold text-violet-800">{formatRupiah(commissionData.monthTotal)}</p>
+                  <p className="text-xs text-violet-500 mt-0.5">Komisi dari {commissionData.monthCommissions.length} booking mobil titipan</p>
                 </div>
                 <span className="text-3xl opacity-80">🤝</span>
               </div>
             </div>
           )}
 
-          {/* Tabel Booking Bulan Ini */}
-          {/* Mobile: Card View */}
-          <div className="space-y-3 md:hidden">
-            {monthBookings.length === 0 ? (
-              <div className="rounded-xl border border-slate-200 px-4 py-8 text-center text-slate-400">
-                Tidak ada transaksi pada bulan ini.
-              </div>
-            ) : (
-              monthBookings.map((b) => (
-                <div key={b.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">{b.customers?.name}</p>
-                      <p className="text-xs text-slate-500">{b.cars?.brand} {b.cars?.model}</p>
-                    </div>
-                    <Badge tone={b.payment_status === "paid" ? "green" : "yellow"}>
-                      {paymentStatusLabel[b.payment_status]}
-                    </Badge>
-                  </div>
-                  <div className="mt-2 flex items-center justify-between">
-                    <span className="text-xs text-slate-400">{formatTanggal(b.start_date)}</span>
-                    <span className="text-sm font-bold text-slate-900">{formatRupiah(Number(b.total_cost) + Number(b.late_fee || 0))}</span>
-                  </div>
+          {/* Daftar Transaksi */}
+          <div>
+            <h3 className="text-sm font-semibold text-slate-700 mb-2">
+              Daftar Transaksi {namaBulan[month]} {year}
+            </h3>
+
+            {/* Mobile: Card View */}
+            <div className="space-y-3 md:hidden">
+              {monthBookings.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-slate-300 px-4 py-8 text-center">
+                  <p className="text-2xl mb-2">📭</p>
+                  <p className="text-sm font-medium text-slate-500">Belum ada transaksi bulan ini</p>
+                  <p className="text-xs text-slate-400 mt-1">Transaksi akan muncul setelah ada booking yang selesai</p>
                 </div>
-              ))
-            )}
+              ) : (
+                monthBookings.map((b) => {
+                  const totalWithFine = Number(b.total_cost) + Number(b.late_fee || 0);
+                  return (
+                    <div key={b.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">{b.customers?.name}</p>
+                          <p className="text-xs text-slate-500">{b.cars?.brand} {b.cars?.model} · {b.cars?.plate}</p>
+                        </div>
+                        <Badge tone={b.payment_status === "paid" ? "green" : "yellow"}>
+                          {paymentStatusLabel[b.payment_status]}
+                        </Badge>
+                      </div>
+                      <div className="mt-2 flex items-center justify-between text-xs">
+                        <div className="text-slate-400">
+                          <p>{formatTanggal(b.start_date)} → {formatTanggal(b.end_date)}</p>
+                          <p>{b.duration_days} hari</p>
+                        </div>
+                        <span className="text-base font-bold text-slate-900">{formatRupiah(totalWithFine)}</span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
 
           {/* Desktop: Table View */}
@@ -304,7 +347,8 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
                     <tr>
                       <th className="px-4 py-3">Pelanggan</th>
                       <th className="px-4 py-3">Mobil</th>
-                      <th className="px-4 py-3">Tanggal</th>
+                      <th className="px-4 py-3">Tanggal Sewa</th>
+                      <th className="px-4 py-3 text-center">Durasi</th>
                       <th className="px-4 py-3 text-right">Total</th>
                       <th className="px-4 py-3">Status</th>
                     </tr>
@@ -312,8 +356,8 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
                   <tbody className="divide-y divide-slate-100">
                     {monthBookings.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="px-4 py-8 text-center text-slate-400">
-                          Tidak ada transaksi pada bulan ini.
+                        <td colSpan={6} className="px-4 py-8 text-center text-slate-400">
+                          Belum ada transaksi bulan ini. Data muncul setelah booking diselesaikan.
                         </td>
                       </tr>
                     ) : (
@@ -326,7 +370,10 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
                             {b.cars?.brand} {b.cars?.model}
                           </td>
                           <td className="px-4 py-3 text-xs text-slate-500">
-                            {formatTanggal(b.start_date)}
+                            {formatTanggal(b.start_date)} → {formatTanggal(b.end_date)}
+                          </td>
+                          <td className="px-4 py-3 text-center text-xs">
+                            {b.duration_days} hari
                           </td>
                           <td className="px-4 py-3 text-right font-medium">
                             {formatRupiah(Number(b.total_cost) + Number(b.late_fee || 0))}
