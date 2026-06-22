@@ -114,33 +114,89 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
   async function extractKtpData(file: File) {
     setExtracting(true);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const res = await fetch("/api/extract-ktp", { method: "POST", body: formData });
-      const data = await res.json();
-
-      if (!res.ok) {
-        // Extract gagal bukan masalah fatal — user bisa isi manual
-        toast("Auto-extract gagal. Silakan isi data manual.", "error");
-        console.warn("Extract KTP error:", data.error, data.detail);
+      // Try api.co.id first (if configured & has balance)
+      const apiResult = await tryApiExtract(file);
+      if (apiResult) {
+        setForm((prev) => ({
+          ...prev,
+          nik: apiResult.nik || prev.nik,
+          name: apiResult.nama || prev.name,
+          address: buildAddress(apiResult) || prev.address,
+        }));
+        toast("Data KTP berhasil di-extract", "success");
         return;
       }
 
-      // Auto-fill form with extracted data
-      setForm((prev) => ({
-        ...prev,
-        nik: data.nik || prev.nik,
-        name: data.nama || prev.name,
-        address: buildAddress(data) || prev.address,
-      }));
-
-      toast("Data KTP berhasil di-extract", "success");
+      // Fallback: Tesseract.js OCR (free, client-side)
+      const ocrResult = await ocrExtractKtp(file);
+      if (ocrResult.nik || ocrResult.nama) {
+        setForm((prev) => ({
+          ...prev,
+          nik: ocrResult.nik || prev.nik,
+          name: ocrResult.nama || prev.name,
+          address: ocrResult.alamat || prev.address,
+        }));
+        toast("Data KTP berhasil dibaca (OCR)", "success");
+      } else {
+        toast("Tidak bisa membaca data KTP. Silakan isi manual.", "error");
+      }
     } catch {
       toast("Gagal extract data KTP. Silakan isi manual.", "error");
     } finally {
       setExtracting(false);
     }
+  }
+
+  async function tryApiExtract(file: File): Promise<Record<string, string> | null> {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/extract-ktp", { method: "POST", body: formData });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
+    }
+  }
+
+  async function ocrExtractKtp(file: File): Promise<{ nik: string; nama: string; alamat: string }> {
+    // Dynamically load Tesseract.js from CDN
+    if (!(window as unknown as Record<string, unknown>).Tesseract) {
+      await new Promise<void>((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error("Gagal load OCR engine"));
+        document.head.appendChild(script);
+      });
+    }
+
+    const Tesseract = (window as unknown as Record<string, unknown>).Tesseract as {
+      recognize: (image: File, lang: string) => Promise<{ data: { text: string } }>;
+    };
+
+    const { data: { text } } = await Tesseract.recognize(file, "ind");
+    console.log("OCR raw text:", text);
+
+    // Extract NIK (16 consecutive digits)
+    const nikMatch = text.match(/\b(\d{16})\b/);
+    const nik = nikMatch ? nikMatch[1] : "";
+
+    // Extract Nama - look for line after "Nama" label
+    let nama = "";
+    const namaMatch = text.match(/Nama\s*[:\-]?\s*([A-Z][A-Z\s.]+)/i);
+    if (namaMatch) {
+      nama = namaMatch[1].trim().replace(/\s+/g, " ");
+    }
+
+    // Extract Alamat
+    let alamat = "";
+    const alamatMatch = text.match(/Alamat\s*[:\-]?\s*(.+)/i);
+    if (alamatMatch) {
+      alamat = alamatMatch[1].trim();
+    }
+
+    return { nik, nama, alamat };
   }
 
   function buildAddress(data: Record<string, string>): string {
