@@ -121,7 +121,9 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
       const data = await res.json();
 
       if (!res.ok) {
-        toast(data.error || "Gagal extract data KTP", "error");
+        // Extract gagal bukan masalah fatal — user bisa isi manual
+        toast("Auto-extract gagal. Silakan isi data manual.", "error");
+        console.warn("Extract KTP error:", data.error, data.detail);
         return;
       }
 

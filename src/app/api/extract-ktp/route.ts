@@ -18,8 +18,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Forward file to api.co.id KTP extractor
+    // Try with field name "image" (common for OCR APIs)
     const extractForm = new FormData();
-    extractForm.append("file", file);
+    extractForm.append("image", file);
 
     const extractRes = await fetch("https://api.co.id/v1/ktp-extractor", {
       method: "POST",
@@ -29,39 +30,53 @@ export async function POST(req: NextRequest) {
       body: extractForm,
     });
 
+    const responseText = await extractRes.text();
+    console.log("api.co.id response status:", extractRes.status);
+    console.log("api.co.id response body:", responseText);
+
     if (!extractRes.ok) {
-      const errText = await extractRes.text();
-      console.error("api.co.id extract error:", extractRes.status, errText);
+      // Return the actual error from the API for debugging
       return NextResponse.json(
-        { error: "Gagal extract data KTP. Pastikan foto jelas dan tidak buram." },
+        { 
+          error: `Gagal extract data KTP (${extractRes.status}). Silakan isi data manual.`,
+          detail: responseText 
+        },
         { status: 500 }
       );
     }
 
-    const result = await extractRes.json();
+    let result;
+    try {
+      result = JSON.parse(responseText);
+    } catch {
+      return NextResponse.json(
+        { error: "Response dari API tidak valid. Silakan isi data manual." },
+        { status: 500 }
+      );
+    }
 
     // Normalize response - api.co.id may return data in different structures
-    const extracted = result.data || result;
+    const extracted = result.data || result.result || result;
 
     return NextResponse.json({
-      nik: extracted.nik || "",
-      nama: extracted.nama || extracted.name || "",
-      tempat_lahir: extracted.tempat_lahir || extracted.birthplace || "",
-      tanggal_lahir: extracted.tanggal_lahir || extracted.birthdate || "",
-      jenis_kelamin: extracted.jenis_kelamin || extracted.gender || "",
-      alamat: extracted.alamat || extracted.address || "",
-      rt_rw: extracted.rt_rw || "",
-      kelurahan: extracted.kelurahan || extracted.village || "",
-      kecamatan: extracted.kecamatan || extracted.district || "",
-      agama: extracted.agama || extracted.religion || "",
-      status_perkawinan: extracted.status_perkawinan || extracted.marital_status || "",
-      pekerjaan: extracted.pekerjaan || extracted.occupation || "",
-      kewarganegaraan: extracted.kewarganegaraan || extracted.nationality || "",
+      nik: extracted.nik || extracted.NIK || "",
+      nama: extracted.nama || extracted.name || extracted.Nama || "",
+      tempat_lahir: extracted.tempat_lahir || extracted.birthplace || extracted.tempatLahir || "",
+      tanggal_lahir: extracted.tanggal_lahir || extracted.birthdate || extracted.tanggalLahir || "",
+      jenis_kelamin: extracted.jenis_kelamin || extracted.gender || extracted.jenisKelamin || "",
+      alamat: extracted.alamat || extracted.address || extracted.Alamat || "",
+      rt_rw: extracted.rt_rw || extracted.rtRw || extracted.RT_RW || "",
+      kelurahan: extracted.kelurahan || extracted.village || extracted.kelDesa || "",
+      kecamatan: extracted.kecamatan || extracted.district || extracted.Kecamatan || "",
+      agama: extracted.agama || extracted.religion || extracted.Agama || "",
+      status_perkawinan: extracted.status_perkawinan || extracted.marital_status || extracted.statusPerkawinan || "",
+      pekerjaan: extracted.pekerjaan || extracted.occupation || extracted.Pekerjaan || "",
+      kewarganegaraan: extracted.kewarganegaraan || extracted.nationality || extracted.Kewarganegaraan || "",
     });
   } catch (err) {
     console.error("Extract KTP error:", err);
     return NextResponse.json(
-      { error: "Terjadi kesalahan saat extract data KTP" },
+      { error: "Terjadi kesalahan saat extract data KTP. Silakan isi data manual." },
       { status: 500 }
     );
   }
