@@ -308,10 +308,8 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
             </label>
             <div className="flex flex-col sm:flex-row gap-3 items-start">
               {/* Upload Area */}
-              <div
-                className="relative flex-1 w-full border-2 border-dashed border-slate-300 rounded-lg p-4 text-center hover:border-blue-400 hover:bg-blue-50/50 transition-colors cursor-pointer"
-                onClick={() => fileInputRef.current?.click()}
-              >
+              <div className="relative flex-1 w-full">
+                {/* Hidden file input - gallery/file picker */}
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -319,27 +317,50 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
                   onChange={handleFileSelect}
                   className="hidden"
                 />
+                {/* Hidden camera input - direct camera capture on mobile */}
+                <input
+                  id="camera-input"
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+
                 {uploading || extracting ? (
-                  <div className="flex flex-col items-center gap-2 py-2">
-                    <Loader2 className="h-6 w-6 text-blue-500 animate-spin" />
-                    <span className="text-sm text-blue-600">
-                      {uploading ? "Mengupload..." : "Membaca data KTP..."}
-                    </span>
+                  <div className="border-2 border-dashed border-blue-300 rounded-lg p-4 text-center bg-blue-50/50">
+                    <div className="flex flex-col items-center gap-2 py-2">
+                      <Loader2 className="h-6 w-6 text-blue-500 animate-spin" />
+                      <span className="text-sm text-blue-600">
+                        {uploading ? "Mengupload..." : "Membaca data KTP..."}
+                      </span>
+                    </div>
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center gap-2 py-2">
-                    <div className="flex items-center gap-2 text-slate-500">
-                      <Camera className="h-5 w-5" />
-                      <Upload className="h-5 w-5" />
-                    </div>
-                    <span className="text-sm text-slate-600">
-                      Klik untuk upload foto KTP
-                    </span>
-                    <span className="text-xs text-slate-400">
-                      JPG, PNG, WebP (maks 5MB)
-                    </span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* Camera button - primarily for mobile */}
+                    <button
+                      type="button"
+                      className="border-2 border-dashed border-slate-300 rounded-lg p-3 text-center hover:border-blue-400 hover:bg-blue-50/50 transition-colors cursor-pointer flex flex-col items-center gap-1.5"
+                      onClick={() => document.getElementById("camera-input")?.click()}
+                    >
+                      <Camera className="h-5 w-5 text-slate-500" />
+                      <span className="text-xs text-slate-600">Foto Langsung</span>
+                    </button>
+                    {/* Upload from gallery/file */}
+                    <button
+                      type="button"
+                      className="border-2 border-dashed border-slate-300 rounded-lg p-3 text-center hover:border-blue-400 hover:bg-blue-50/50 transition-colors cursor-pointer flex flex-col items-center gap-1.5"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <Upload className="h-5 w-5 text-slate-500" />
+                      <span className="text-xs text-slate-600">Pilih File</span>
+                    </button>
                   </div>
                 )}
+                <p className="text-xs text-slate-400 mt-1.5 text-center">
+                  JPG, PNG, WebP (maks 5MB)
+                </p>
               </div>
 
               {/* Preview */}

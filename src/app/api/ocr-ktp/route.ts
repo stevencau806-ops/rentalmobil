@@ -140,22 +140,49 @@ function parseKtpText(text: string): { nik: string; nama: string; alamat: string
   // Clean nama
   nama = nama.replace(/[^A-Za-z\s.',-]/g, "").replace(/\s+/g, " ").trim();
 
-  // Extract Alamat
+  // Extract Alamat - gabungkan dengan RT/RW, Kel, Kec
   let alamat = "";
+  let rtRw = "";
+  let kelDesa = "";
+  let kecamatan = "";
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
+
+    // Alamat
     const alamatMatch = line.match(/Alamat\s*[:\-]\s*(.+)/i);
-    if (alamatMatch) {
+    if (alamatMatch && !alamat) {
       alamat = alamatMatch[1].trim();
+      // Check if next line continues address (not a label)
       if (i + 1 < lines.length) {
         const next = lines[i + 1];
         if (!/^(RT|Kel|Kec|Agama|Status|Pekerjaan|Kewarganegaraan)/i.test(next)) {
           alamat += " " + next.trim();
         }
       }
-      break;
     }
+
+    // RT/RW
+    const rtMatch = line.match(/RT\s*[\/\\]\s*RW\s*[:\-]?\s*(.+)/i);
+    if (rtMatch) rtRw = rtMatch[1].trim();
+
+    // Kel/Desa
+    const kelMatch = line.match(/Kel\s*[\/\\]?\s*Desa\s*[:\-]?\s*(.+)/i);
+    if (kelMatch) kelDesa = kelMatch[1].trim();
+
+    // Kecamatan
+    const kecMatch = line.match(/Kecamatan\s*[:\-]?\s*(.+)/i);
+    if (kecMatch) kecamatan = kecMatch[1].trim();
   }
 
-  return { nik, nama, alamat };
+  // Build full address
+  const addressParts: string[] = [];
+  if (alamat) addressParts.push(alamat);
+  if (rtRw) addressParts.push(`RT/RW ${rtRw}`);
+  if (kelDesa) addressParts.push(`Kel. ${kelDesa}`);
+  if (kecamatan) addressParts.push(`Kec. ${kecamatan}`);
+
+  const fullAddress = addressParts.join(", ");
+
+  return { nik, nama, alamat: fullAddress };
 }
