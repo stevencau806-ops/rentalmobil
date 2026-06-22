@@ -19,9 +19,9 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
-      { url: "https://res.cloudinary.com/dfxc4ceya/image/upload/v1782120655/icon-512x512_tuodrb.png", type: "image/png", sizes: "512x512" },
+      { url: "/icon-512x512.png", type: "image/png", sizes: "512x512" },
     ],
-    apple: "https://res.cloudinary.com/dfxc4ceya/image/upload/v1782120655/icon-512x512_tuodrb.png",
+    apple: "/icon-192x192.png",
   },
 };
 
