@@ -101,8 +101,8 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
       setPreviewUrl(data.url);
       toast("Foto KTP berhasil diupload", "success");
 
-      // Auto-extract KTP data
-      await extractKtpData(file);
+      // Auto-extract KTP data using Cloudinary URL
+      await extractKtpData(data.url);
     } catch {
       toast("Gagal upload foto KTP", "error");
       setPreviewUrl(null);
@@ -111,13 +111,14 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
     }
   }
 
-  async function extractKtpData(file: File) {
+  async function extractKtpData(cloudinaryUrl: string) {
     setExtracting(true);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const res = await fetch("/api/ocr-ktp", { method: "POST", body: formData });
+      const res = await fetch("/api/ocr-ktp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: cloudinaryUrl }),
+      });
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
