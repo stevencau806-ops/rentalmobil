@@ -178,22 +178,51 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
     const { data: { text } } = await Tesseract.recognize(file, "ind");
     console.log("OCR raw text:", text);
 
-    // Extract NIK (16 consecutive digits)
-    const nikMatch = text.match(/\b(\d{16})\b/);
-    const nik = nikMatch ? nikMatch[1] : "";
+    // Split into lines for better parsing
+    const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
 
-    // Extract Nama - look for line after "Nama" label
-    let nama = "";
-    const namaMatch = text.match(/Nama\s*[:\-]?\s*([A-Z][A-Z\s.]+)/i);
-    if (namaMatch) {
-      nama = namaMatch[1].trim().replace(/\s+/g, " ");
+    // Extract NIK (16 consecutive digits)
+    const nikMatch = text.match(/(\d[\d\s]{14,}\d)/);
+    let nik = "";
+    if (nikMatch) {
+      nik = nikMatch[1].replace(/\s/g, "");
+      if (nik.length > 16) nik = nik.slice(0, 16);
+      if (nik.length !== 16) nik = "";
     }
+
+    // Extract Nama - multiple patterns for KTP format
+    let nama = "";
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      // Pattern: "Nama : SURYA" or "Nama: SURYA" or "Nama SURYA"
+      const namaMatch = line.match(/^Nama\s*[:\-\.]\s*(.+)/i);
+      if (namaMatch) {
+        nama = namaMatch[1].trim();
+        break;
+      }
+      // Pattern: line that just says "Nama" and next line is the value
+      if (/^Nama\s*$/i.test(line) && i + 1 < lines.length) {
+        nama = lines[i + 1].replace(/^[:\-\.]\s*/, "").trim();
+        break;
+      }
+    }
+
+    // Clean up nama - remove non-alpha chars at start/end, normalize spaces
+    nama = nama.replace(/[^A-Za-z\s.']/g, "").replace(/\s+/g, " ").trim();
 
     // Extract Alamat
     let alamat = "";
-    const alamatMatch = text.match(/Alamat\s*[:\-]?\s*(.+)/i);
-    if (alamatMatch) {
-      alamat = alamatMatch[1].trim();
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const alamatMatch = line.match(/^Alamat\s*[:\-\.]\s*(.+)/i);
+      if (alamatMatch) {
+        alamat = alamatMatch[1].trim();
+        break;
+      }
+      if (/^Alamat\s*$/i.test(line) && i + 1 < lines.length) {
+        alamat = lines[i + 1].replace(/^[:\-\.]\s*/, "").trim();
+        break;
+      }
     }
 
     return { nik, nama, alamat };
