@@ -11,6 +11,7 @@ interface BeforeInstallPromptEvent extends Event {
 export function PWAInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
+  const [showManual, setShowManual] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
 
   const checkShouldShow = useCallback(() => {
@@ -54,8 +55,11 @@ export function PWAInstallPrompt() {
       await deferredPrompt.prompt();
       await deferredPrompt.userChoice;
       setDeferredPrompt(null);
+      setShowPrompt(false);
+    } else {
+      // No native prompt available - show manual instructions
+      setShowManual(true);
     }
-    setShowPrompt(false);
   }
 
   function handleDismiss() {
@@ -93,11 +97,16 @@ export function PWAInstallPrompt() {
             </div>
           </div>
 
-          {isIOS && !deferredPrompt ? (
-            <div className="mt-3 bg-slate-50 rounded-lg p-2.5 flex items-center gap-2">
-              <Share2 className="h-4 w-4 text-blue-600 flex-shrink-0" />
-              <p className="text-[11px] text-slate-600">
-                Tap <strong>Share</strong> di bawah, lalu pilih <strong>&quot;Add to Home Screen&quot;</strong>
+          {isIOS || showManual ? (
+            <div className="mt-3 bg-slate-50 rounded-lg p-2.5">
+              <p className="text-[11px] text-slate-600 flex items-start gap-2">
+                <Share2 className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                <span>
+                  {isIOS
+                    ? <>Tap <strong>Share</strong> (ikon kotak + panah) di bawah, lalu pilih <strong>&quot;Add to Home Screen&quot;</strong></>
+                    : <>Tap menu <strong>&#8942;</strong> (titik tiga) di kanan atas browser, lalu pilih <strong>&quot;Install app&quot;</strong> atau <strong>&quot;Add to Home Screen&quot;</strong></>
+                  }
+                </span>
               </p>
             </div>
           ) : (
