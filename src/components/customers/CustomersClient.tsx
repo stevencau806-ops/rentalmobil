@@ -164,9 +164,14 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
       const formData = new FormData();
       formData.append("file", file);
       const res = await fetch("/api/ocr-ktp", { method: "POST", body: formData });
-      if (!res.ok) return null;
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        console.error("Vision OCR error:", errData);
+        return null;
+      }
       return await res.json();
-    } catch {
+    } catch (e) {
+      console.error("Vision OCR fetch error:", e);
       return null;
     }
   }

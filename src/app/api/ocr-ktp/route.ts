@@ -73,9 +73,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(result);
   } catch (err) {
-    console.error("OCR KTP error:", err);
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    console.error("OCR KTP error:", errorMessage);
     return NextResponse.json(
-      { error: "Terjadi kesalahan saat membaca KTP" },
+      { error: `Terjadi kesalahan: ${errorMessage}` },
       { status: 500 }
     );
   }
