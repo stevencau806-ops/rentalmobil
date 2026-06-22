@@ -817,43 +817,54 @@ export function BookingClient({
             <Button onClick={() => {
               const notaEl = document.getElementById("nota-print-area");
               if (!notaEl) return;
-              const printWindow = window.open("", "_blank");
-              if (!printWindow) {
-                // Fallback if popup blocked
-                document.body.classList.add("printing-nota");
-                setTimeout(() => { window.print(); document.body.classList.remove("printing-nota"); }, 100);
-                return;
-              }
-              printWindow.document.write(`<!DOCTYPE html><html><head><title>Nota Sewa</title><style>
-                body { font-family: system-ui, -apple-system, sans-serif; padding: 8mm; font-size: 12px; line-height: 1.5; color: #1e293b; }
+
+              // Create hidden iframe for printing (works on mobile)
+              const iframe = document.createElement("iframe");
+              iframe.style.position = "fixed";
+              iframe.style.top = "-9999px";
+              iframe.style.left = "-9999px";
+              iframe.style.width = "210mm";
+              iframe.style.height = "297mm";
+              document.body.appendChild(iframe);
+
+              const doc = iframe.contentDocument || iframe.contentWindow?.document;
+              if (!doc) { document.body.removeChild(iframe); return; }
+
+              doc.open();
+              doc.write(`<!DOCTYPE html><html><head><title>Nota Sewa</title><style>
+                body { font-family: system-ui, -apple-system, sans-serif; padding: 6mm; font-size: 12px; line-height: 1.4; color: #1e293b; margin: 0; }
                 * { box-sizing: border-box; }
                 .flex { display: flex; } .flex-col { flex-direction: column; } .items-center { align-items: center; } .justify-between { justify-content: space-between; }
-                .grid { display: grid; } .grid-cols-2 { grid-template-columns: repeat(2, 1fr); } .gap-4 { gap: 1rem; }
-                .text-center { text-align: center; } .text-right { text-align: right; } .text-left { text-align: left; }
-                .font-bold { font-weight: 700; } .font-semibold { font-weight: 600; } .font-medium { font-weight: 500; } .font-mono { font-family: monospace; }
-                .text-lg { font-size: 14px; } .text-sm { font-size: 11px; } .text-xs { font-size: 10px; } .text-\\[11px\\] { font-size: 9.5px; }
-                .uppercase { text-transform: uppercase; } .tracking-wide { letter-spacing: 0.05em; }
+                .grid { display: grid; } .grid-cols-3 { grid-template-columns: repeat(3, 1fr); } .grid-cols-2 { grid-template-columns: repeat(2, 1fr); } .gap-2 { gap: 0.5rem; }
+                .text-center { text-align: center; } .text-right { text-align: right; }
+                .font-bold { font-weight: 700; } .font-semibold { font-weight: 600; } .font-medium { font-weight: 500; }
+                .text-sm { font-size: 11px; } .text-xs { font-size: 10px; } .text-\\[12px\\] { font-size: 12px; } .text-\\[11px\\] { font-size: 11px; } .text-\\[10px\\] { font-size: 10px; } .text-\\[9px\\] { font-size: 9px; }
+                .uppercase { text-transform: uppercase; } .leading-snug { line-height: 1.3; } .leading-tight { line-height: 1.2; }
                 .text-slate-400 { color: #94a3b8; } .text-slate-500 { color: #64748b; } .text-slate-600 { color: #475569; } .text-slate-700 { color: #334155; } .text-slate-900 { color: #0f172a; }
-                .text-red-600 { color: #dc2626; } .text-amber-700 { color: #b45309; } .text-emerald-700 { color: #047857; }
-                .bg-emerald-100 { background: #d1fae5; } .bg-amber-100 { background: #fef3c7; } .bg-slate-50 { background: #f8fafc; }
-                .border-b { border-bottom: 1px solid #e2e8f0; } .border-b-2 { border-bottom: 2px solid #1e3a5f; } .border-t-2 { border-top: 2px solid #cbd5e1; } .border-t { border-top: 1px solid #e2e8f0; }
-                .border { border: 1px solid #e2e8f0; } .border-slate-200 { border-color: #e2e8f0; } .border-slate-400 { border-color: #94a3b8; }
-                .rounded-lg { border-radius: 0.5rem; } .rounded { border-radius: 0.25rem; }
-                .p-3 { padding: 0.75rem; } .p-4 { padding: 1rem; } .p-6 { padding: 1.5rem; } .px-2 { padding: 0 0.5rem; } .px-4 { padding: 0 1rem; } .py-1 { padding: 0.25rem 0; } .py-2 { padding: 0.5rem 0; } .py-3 { padding: 0.75rem 0; }
-                .pb-4 { padding-bottom: 1rem; } .pt-4 { padding-top: 1rem; } .pl-4 { padding-left: 1rem; }
-                .mt-1 { margin-top: 0.25rem; } .mt-2 { margin-top: 0.5rem; } .mt-4 { margin-top: 1rem; } .mt-5 { margin-top: 1.25rem; } .mt-6 { margin-top: 1.5rem; } .mt-8 { margin-top: 2rem; } .mt-16 { margin-top: 4rem; } .mb-1 { margin-bottom: 0.25rem; } .mb-2 { margin-bottom: 0.5rem; }
-                .w-full { width: 100%; } .w-32 { width: 8rem; } .h-24 { height: 5rem; }
-                .object-contain { object-fit: contain; } .w-auto { width: auto; }
+                .text-red-500 { color: #ef4444; } .text-red-600 { color: #dc2626; } .text-white { color: #fff; }
+                .bg-emerald-500 { background: #10b981; } .bg-amber-500 { background: #f59e0b; } .bg-slate-50 { background: #f8fafc; }
+                .border-b { border-bottom: 1px solid #e2e8f0; } .border-t-2 { border-top: 2px solid #1e293b; } .border { border: 1px solid #e2e8f0; } .border-slate-200 { border-color: #e2e8f0; } .border-slate-300 { border-color: #cbd5e1; } .border-slate-400 { border-color: #94a3b8; } .border-slate-800 { border-color: #1e293b; }
+                .rounded { border-radius: 0.25rem; } .rounded-lg { border-radius: 0.5rem; }
+                .p-1\\.5 { padding: 0.375rem; } .p-2 { padding: 0.5rem; } .p-4 { padding: 1rem; } .px-2 { padding-left: 0.5rem; padding-right: 0.5rem; } .px-6 { padding-left: 1.5rem; padding-right: 1.5rem; } .py-0\\.5 { padding-top: 0.125rem; padding-bottom: 0.125rem; } .py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; } .py-1\\.5 { padding-top: 0.375rem; padding-bottom: 0.375rem; }
+                .pb-2 { padding-bottom: 0.5rem; } .pl-3 { padding-left: 0.75rem; }
+                .mt-1 { margin-top: 0.25rem; } .mt-2 { margin-top: 0.5rem; } .mt-3 { margin-top: 0.75rem; } .mb-0\\.5 { margin-bottom: 0.125rem; } .mb-1 { margin-bottom: 0.25rem; }
+                .w-full { width: 100%; } .w-24 { width: 6rem; } .w-auto { width: auto; } .h-10 { height: 2.5rem; }
+                .inline-block { display: inline-block; } .object-contain { object-fit: contain; }
                 .divide-y > * + * { border-top: 1px solid #f1f5f9; }
-                .space-y-1 > * + * { margin-top: 0.25rem; }
+                .space-y-0 > * + * { margin-top: 0; }
                 .list-decimal { list-style-type: decimal; }
-                .leading-relaxed { line-height: 1.625; }
-                .inline-flex { display: inline-flex; }
                 table { width: 100%; border-collapse: collapse; }
-                @media print { body { padding: 0; } @page { size: A4; margin: 10mm; } }
-              </style></head><body>${notaEl.outerHTML}</body></html>`);
-              printWindow.document.close();
-              printWindow.onload = () => { printWindow.print(); printWindow.close(); };
+                .mt-10 { margin-top: 2.5rem; }
+                @page { size: A4; margin: 8mm; }
+              </style></head><body>${notaEl.innerHTML}</body></html>`);
+              doc.close();
+
+              iframe.onload = () => {
+                setTimeout(() => {
+                  iframe.contentWindow?.print();
+                  setTimeout(() => document.body.removeChild(iframe), 1000);
+                }, 300);
+              };
             }}>
               <span className="inline-flex items-center gap-1.5">
                 <Printer className="h-4 w-4" />

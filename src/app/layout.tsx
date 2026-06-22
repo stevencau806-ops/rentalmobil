@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/Toast";
 import { NavigationProgress } from "@/components/NavigationProgress";
+import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -43,6 +44,7 @@ export default function RootLayout({
           <NavigationProgress />
         </Suspense>
         <ToastProvider>{children}</ToastProvider>
+        <PWAInstallPrompt />
       </body>
     </html>
   );
