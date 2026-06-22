@@ -1,11 +1,11 @@
-const CACHE_NAME = "erlangga-rental-v1";
+const CACHE_NAME = "erlangga-rental-v2";
 
 // Files to cache for offline
 const STATIC_ASSETS = [
   "/dashboard",
   "/manifest.json",
-  "https://res.cloudinary.com/dfxc4ceya/image/upload/w_192,h_192,c_fill/v1782120655/icon-512x512_tuodrb.png",
-  "https://res.cloudinary.com/dfxc4ceya/image/upload/v1782120655/icon-512x512_tuodrb.png",
+  "/icon-192x192.png",
+  "/icon-512x512.png",
 ];
 
 // Install - cache static assets
