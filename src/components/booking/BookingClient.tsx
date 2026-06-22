@@ -818,97 +818,108 @@ export function BookingClient({
           const grandTotal = Number(b.total_cost) + lateFee + finesTotal;
 
           return (
-            <div className="space-y-4 text-sm">
-              {/* Status */}
-              <div className="flex items-center gap-2">
-                <Badge tone={b.payment_status === "paid" ? "green" : "amber"}>
+            <div className="space-y-3 text-sm">
+              {/* Status Badges - colorful */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`rounded-full px-3 py-1 text-xs font-bold ${
+                  b.payment_status === "paid"
+                    ? "bg-emerald-500 text-white"
+                    : "bg-amber-500 text-white"
+                }`}>
                   {b.payment_status === "paid" ? "LUNAS" : "BELUM BAYAR"}
-                </Badge>
-                {b.actual_return_date && <Badge tone="gray">Selesai</Badge>}
-                {!b.actual_return_date && <Badge tone="blue">Sedang Berjalan</Badge>}
+                </span>
+                {b.actual_return_date ? (
+                  <span className="rounded-full bg-slate-500 px-3 py-1 text-xs font-bold text-white">SELESAI</span>
+                ) : (
+                  <span className="rounded-full bg-blue-500 px-3 py-1 text-xs font-bold text-white">SEDANG BERJALAN</span>
+                )}
+                {lateFee > 0 && (
+                  <span className="rounded-full bg-red-500 px-3 py-1 text-xs font-bold text-white">ADA DENDA</span>
+                )}
               </div>
 
-              {/* Customer & Car */}
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className="rounded-lg border border-slate-200 p-3">
-                  <p className="text-xs font-semibold uppercase text-slate-400 mb-1">Pelanggan</p>
-                  <p className="font-semibold">{b.customers?.name ?? "-"}</p>
-                  <p className="text-xs text-slate-500">NIK: {b.customers?.nik ?? "-"}</p>
-                  <p className="text-xs text-slate-500">HP: {b.customers?.phone ?? "-"}</p>
-                </div>
-                <div className="rounded-lg border border-slate-200 p-3">
-                  <p className="text-xs font-semibold uppercase text-slate-400 mb-1">Kendaraan</p>
-                  <p className="font-semibold">{b.cars?.brand} {b.cars?.model}</p>
-                  <p className="text-xs text-slate-500">Plat: {b.cars?.plate ?? "-"}</p>
-                  <p className="text-xs text-slate-500">Tarif: {formatRupiah(b.cars?.tariff_per_day ?? 0)}/hari</p>
+              {/* Customer - Purple */}
+              <div className="rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 p-3 text-white">
+                <p className="text-[10px] font-bold uppercase opacity-80">Pelanggan</p>
+                <p className="text-base font-bold mt-0.5">{b.customers?.name ?? "-"}</p>
+                <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs opacity-90">
+                  <span>NIK: {b.customers?.nik ?? "-"}</span>
+                  <span>HP: {b.customers?.phone ?? "-"}</span>
                 </div>
               </div>
 
-              {/* Dates */}
-              <div className="rounded-lg border border-slate-200 p-3">
-                <p className="text-xs font-semibold uppercase text-slate-400 mb-2">Periode Sewa</p>
-                <div className="grid grid-cols-2 gap-2 text-xs">
+              {/* Car - Blue */}
+              <div className="rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 p-3 text-white">
+                <p className="text-[10px] font-bold uppercase opacity-80">Kendaraan</p>
+                <p className="text-base font-bold mt-0.5">{b.cars?.brand} {b.cars?.model}</p>
+                <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs opacity-90">
+                  <span>Plat: {b.cars?.plate ?? "-"}</span>
+                  <span>Tarif: {formatRupiah(b.cars?.tariff_per_day ?? 0)}/hari</span>
+                </div>
+              </div>
+
+              {/* Dates - Teal */}
+              <div className="rounded-xl bg-gradient-to-r from-teal-500 to-teal-600 p-3 text-white">
+                <p className="text-[10px] font-bold uppercase opacity-80">Periode Sewa</p>
+                <div className="mt-1 grid grid-cols-2 gap-2 text-xs">
                   <div>
-                    <span className="text-slate-400">Mulai:</span>
-                    <p className="font-medium">{formatTanggal(b.start_date)}</p>
+                    <span className="opacity-80">Mulai</span>
+                    <p className="font-bold">{formatTanggal(b.start_date)}</p>
                   </div>
                   <div>
-                    <span className="text-slate-400">Selesai:</span>
-                    <p className="font-medium">{formatTanggal(b.end_date)}</p>
+                    <span className="opacity-80">Selesai</span>
+                    <p className="font-bold">{formatTanggal(b.end_date)}</p>
                   </div>
                   <div>
-                    <span className="text-slate-400">Durasi:</span>
-                    <p className="font-medium">{b.duration_days} hari</p>
+                    <span className="opacity-80">Durasi</span>
+                    <p className="font-bold">{b.duration_days} Hari</p>
                   </div>
                   {b.actual_return_date && (
                     <div>
-                      <span className="text-slate-400">Dikembalikan:</span>
-                      <p className="font-medium">{formatTanggalWaktu(b.actual_return_date)}</p>
+                      <span className="opacity-80">Dikembalikan</span>
+                      <p className="font-bold">{formatTanggalWaktu(b.actual_return_date)}</p>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Rincian Biaya */}
-              <div className="rounded-lg border border-slate-200 p-3">
-                <p className="text-xs font-semibold uppercase text-slate-400 mb-2">Rincian Biaya</p>
-                <div className="space-y-1.5">
+              {/* Rincian Biaya - Orange/Amber */}
+              <div className="rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 p-3 text-white">
+                <p className="text-[10px] font-bold uppercase opacity-80">Rincian Biaya</p>
+                <div className="mt-2 space-y-1.5 text-xs">
                   <div className="flex justify-between">
-                    <span>Sewa ({b.duration_days} hari × {formatRupiah(b.cars?.tariff_per_day ?? 0)})</span>
-                    <span className="font-medium">{formatRupiah(Number(b.total_cost))}</span>
+                    <span>Sewa {b.duration_days} hari × {formatRupiah(b.cars?.tariff_per_day ?? 0)}</span>
+                    <span className="font-bold">{formatRupiah(Number(b.total_cost))}</span>
                   </div>
                   {lateFee > 0 && (
-                    <div className="flex justify-between text-red-600">
+                    <div className="flex justify-between bg-white/20 rounded px-2 py-1">
                       <span>Denda Keterlambatan</span>
-                      <span className="font-medium">{formatRupiah(lateFee)}</span>
+                      <span className="font-bold">{formatRupiah(lateFee)}</span>
                     </div>
                   )}
                   {fines.map((f, i) => (
-                    <div key={i} className="flex justify-between text-red-600">
+                    <div key={i} className="flex justify-between bg-white/20 rounded px-2 py-1">
                       <span>Denda: {f.label || f.type}</span>
-                      <span className="font-medium">{formatRupiah(f.amount)}</span>
+                      <span className="font-bold">{formatRupiah(f.amount)}</span>
                     </div>
                   ))}
-                  <div className="flex justify-between border-t border-slate-200 pt-2 font-bold">
-                    <span>TOTAL</span>
-                    <span>{formatRupiah(grandTotal)}</span>
+                  <div className="flex justify-between border-t border-white/40 pt-2 text-sm">
+                    <span className="font-bold">TOTAL</span>
+                    <span className="text-base font-black">{formatRupiah(grandTotal)}</span>
                   </div>
                 </div>
               </div>
 
               {/* Notes */}
               {b.notes && (
-                <div className="rounded-lg bg-slate-50 p-3">
-                  <p className="text-xs font-semibold uppercase text-slate-400 mb-1">Catatan</p>
-                  <p className="text-slate-600">{b.notes}</p>
+                <div className="rounded-xl bg-slate-100 p-3">
+                  <p className="text-[10px] font-bold uppercase text-slate-400">Catatan</p>
+                  <p className="mt-0.5 text-slate-700">{b.notes}</p>
                 </div>
               )}
 
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex justify-end pt-1">
                 <Button variant="outline" onClick={() => setDetailBooking(null)}>Tutup</Button>
-                <Button className="bg-blue-600 text-white hover:bg-blue-700" onClick={() => { setDetailBooking(null); setNotaBooking(b); }}>
-                  Lihat Nota
-                </Button>
               </div>
             </div>
           );
