@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { TriangleAlert } from "lucide-react";
+import { useState, useRef } from "react";
+import { TriangleAlert, Upload, Camera, Eye, X, Loader2 } from "lucide-react";
 import type { Customer } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { DataTable } from "@/components/ui/DataTable";
@@ -43,6 +43,11 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [nikWarned, setNikWarned] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [extracting, setExtracting] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [viewKtpUrl, setViewKtpUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const toast = useToast();
 
   const isBlacklistedNow = blacklistNiks.includes(form.nik.trim());
@@ -50,6 +55,7 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
   function openAdd() {
     setForm(emptyForm);
     setNikWarned(false);
+    setPreviewUrl(null);
     setModalOpen(true);
   }
 
@@ -63,7 +69,85 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
       ktp_url: c.ktp_url ?? "",
     });
     setNikWarned(false);
+    setPreviewUrl(c.ktp_url ?? null);
     setModalOpen(true);
+  }
+
+  async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Show local preview immediately
+    const localUrl = URL.createObjectURL(file);
+    setPreviewUrl(localUrl);
+
+    // Upload to Cloudinary
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/upload-ktp", { method: "POST", body: formData });
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast(data.error || "Gagal upload foto KTP", "error");
+        setPreviewUrl(null);
+        setUploading(false);
+        return;
+      }
+
+      setForm((prev) => ({ ...prev, ktp_url: data.url }));
+      setPreviewUrl(data.url);
+      toast("Foto KTP berhasil diupload", "success");
+
+      // Auto-extract KTP data
+      await extractKtpData(file);
+    } catch {
+      toast("Gagal upload foto KTP", "error");
+      setPreviewUrl(null);
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function extractKtpData(file: File) {
+    setExtracting(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/extract-ktp", { method: "POST", body: formData });
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast(data.error || "Gagal extract data KTP", "error");
+        return;
+      }
+
+      // Auto-fill form with extracted data
+      setForm((prev) => ({
+        ...prev,
+        nik: data.nik || prev.nik,
+        name: data.nama || prev.name,
+        address: buildAddress(data) || prev.address,
+      }));
+
+      toast("Data KTP berhasil di-extract", "success");
+    } catch {
+      toast("Gagal extract data KTP. Silakan isi manual.", "error");
+    } finally {
+      setExtracting(false);
+    }
+  }
+
+  function buildAddress(data: Record<string, string>): string {
+    const parts: string[] = [];
+    if (data.alamat) parts.push(data.alamat);
+    if (data.rt_rw) parts.push(`RT/RW ${data.rt_rw}`);
+    if (data.kelurahan) parts.push(`Kel. ${data.kelurahan}`);
+    if (data.kecamatan) parts.push(`Kec. ${data.kecamatan}`);
+    return parts.join(", ");
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -160,6 +244,25 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
       render: (c) => <span className="text-slate-600">{c.phone ?? "-"}</span>,
     },
     {
+      key: "ktp",
+      header: "KTP",
+      hideOnMobile: true,
+      render: (c) =>
+        c.ktp_url ? (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-blue-600 hover:bg-blue-50"
+            onClick={() => setViewKtpUrl(c.ktp_url)}
+          >
+            <Eye className="h-3.5 w-3.5 mr-1" />
+            Lihat
+          </Button>
+        ) : (
+          <span className="text-slate-400 text-xs">-</span>
+        ),
+    },
+    {
       key: "actions",
       header: "",
       className: "text-right",
@@ -193,6 +296,7 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
         toolbar={<Button onClick={openAdd}>+ Tambah Pelanggan</Button>}
       />
 
+      {/* Form Modal */}
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -200,6 +304,78 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
         size="lg"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* KTP Upload Section */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              Foto KTP
+            </label>
+            <div className="flex flex-col sm:flex-row gap-3 items-start">
+              {/* Upload Area */}
+              <div
+                className="relative flex-1 w-full border-2 border-dashed border-slate-300 rounded-lg p-4 text-center hover:border-blue-400 hover:bg-blue-50/50 transition-colors cursor-pointer"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                {uploading || extracting ? (
+                  <div className="flex flex-col items-center gap-2 py-2">
+                    <Loader2 className="h-6 w-6 text-blue-500 animate-spin" />
+                    <span className="text-sm text-blue-600">
+                      {uploading ? "Mengupload..." : "Membaca data KTP..."}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-2 py-2">
+                    <div className="flex items-center gap-2 text-slate-500">
+                      <Camera className="h-5 w-5" />
+                      <Upload className="h-5 w-5" />
+                    </div>
+                    <span className="text-sm text-slate-600">
+                      Klik untuk upload foto KTP
+                    </span>
+                    <span className="text-xs text-slate-400">
+                      JPG, PNG, WebP (maks 5MB)
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Preview */}
+              {previewUrl && (
+                <div className="relative w-full sm:w-40 h-24 rounded-lg overflow-hidden border border-slate-200 flex-shrink-0">
+                  <img
+                    src={previewUrl}
+                    alt="Preview KTP"
+                    className="w-full h-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPreviewUrl(null);
+                      setForm((prev) => ({ ...prev, ktp_url: "" }));
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
+            {extracting && (
+              <p className="mt-1.5 text-xs text-blue-600 flex items-center gap-1">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Sedang membaca data dari foto KTP...
+              </p>
+            )}
+          </div>
+
           <Input
             label="Nama Pelanggan"
             required
@@ -236,12 +412,6 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
               placeholder="0812xxxxxxx"
             />
-            <Input
-              label="URL Foto KTP (opsional)"
-              value={form.ktp_url}
-              onChange={(e) => setForm({ ...form, ktp_url: e.target.value })}
-              placeholder="https://..."
-            />
           </div>
           <Textarea
             label="Alamat"
@@ -254,11 +424,37 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
             <Button type="button" variant="outline" onClick={() => setModalOpen(false)}>
               Batal
             </Button>
-            <Button type="submit" disabled={saving}>
+            <Button type="submit" disabled={saving || uploading || extracting}>
               {saving ? "Menyimpan..." : "Simpan"}
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* View KTP Modal */}
+      <Modal
+        open={!!viewKtpUrl}
+        onClose={() => setViewKtpUrl(null)}
+        title="Foto KTP"
+        size="lg"
+      >
+        {viewKtpUrl && (
+          <div className="flex flex-col items-center gap-3">
+            <img
+              src={viewKtpUrl}
+              alt="Foto KTP"
+              className="w-full max-h-[70vh] object-contain rounded-lg border border-slate-200"
+            />
+            <a
+              href={viewKtpUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-blue-600 hover:underline"
+            >
+              Buka di tab baru
+            </a>
+          </div>
+        )}
       </Modal>
 
       <ConfirmDialog
