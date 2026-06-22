@@ -172,60 +172,113 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
     }
 
     const Tesseract = (window as unknown as Record<string, unknown>).Tesseract as {
-      recognize: (image: File, lang: string) => Promise<{ data: { text: string } }>;
+      recognize: (image: string, lang: string) => Promise<{ data: { text: string } }>;
     };
 
-    const { data: { text } } = await Tesseract.recognize(file, "ind");
+    // Pre-process image: grayscale + high contrast for better OCR
+    const processedImage = await preprocessImage(file);
+
+    const { data: { text } } = await Tesseract.recognize(processedImage, "eng+ind");
     console.log("OCR raw text:", text);
 
     // Split into lines for better parsing
     const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
 
-    // Extract NIK (16 consecutive digits)
-    const nikMatch = text.match(/(\d[\d\s]{14,}\d)/);
+    // Extract NIK (16 consecutive digits - look for the most likely one)
     let nik = "";
-    if (nikMatch) {
-      nik = nikMatch[1].replace(/\s/g, "");
-      if (nik.length > 16) nik = nik.slice(0, 16);
-      if (nik.length !== 16) nik = "";
+    for (const line of lines) {
+      // Remove all non-digit chars and check if there's 16 digits
+      const digits = line.replace(/[^0-9]/g, "");
+      if (digits.length >= 16) {
+        nik = digits.slice(0, 16);
+        break;
+      }
+    }
+    // Fallback: find 16 digits anywhere in full text
+    if (!nik) {
+      const allDigits = text.replace(/[^0-9]/g, "");
+      if (allDigits.length >= 16) {
+        nik = allDigits.slice(0, 16);
+      }
     }
 
-    // Extract Nama - multiple patterns for KTP format
+    // Extract Nama
     let nama = "";
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      // Pattern: "Nama : SURYA" or "Nama: SURYA" or "Nama SURYA"
-      const namaMatch = line.match(/^Nama\s*[:\-\.]\s*(.+)/i);
+      // Pattern: "Nama : SURYA" or "Nama: value"
+      const namaMatch = line.match(/[Nn]ama\s*[:\-\.]\s*(.+)/);
       if (namaMatch) {
         nama = namaMatch[1].trim();
         break;
       }
-      // Pattern: line that just says "Nama" and next line is the value
-      if (/^Nama\s*$/i.test(line) && i + 1 < lines.length) {
-        nama = lines[i + 1].replace(/^[:\-\.]\s*/, "").trim();
-        break;
+      // Tempat/Tgl Lahir pattern - the line BEFORE this is usually Nama value
+      if (/[Tt]empat/i.test(line) && i > 0) {
+        // Check if previous line could be a name (mostly letters)
+        const prev = lines[i - 1].replace(/[^A-Za-z\s]/g, "").trim();
+        if (prev.length >= 3 && !/nik|provinsi|kabupaten/i.test(prev)) {
+          nama = prev;
+          break;
+        }
       }
     }
 
-    // Clean up nama - remove non-alpha chars at start/end, normalize spaces
+    // Clean up nama
     nama = nama.replace(/[^A-Za-z\s.']/g, "").replace(/\s+/g, " ").trim();
+    // Capitalize properly
+    if (nama) {
+      nama = nama.toUpperCase();
+    }
 
     // Extract Alamat
     let alamat = "";
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      const alamatMatch = line.match(/^Alamat\s*[:\-\.]\s*(.+)/i);
+      const alamatMatch = line.match(/[Aa]lamat\s*[:\-\.]\s*(.+)/);
       if (alamatMatch) {
         alamat = alamatMatch[1].trim();
-        break;
-      }
-      if (/^Alamat\s*$/i.test(line) && i + 1 < lines.length) {
-        alamat = lines[i + 1].replace(/^[:\-\.]\s*/, "").trim();
         break;
       }
     }
 
     return { nik, nama, alamat };
+  }
+
+  async function preprocessImage(file: File): Promise<string> {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        // Scale up for better OCR accuracy
+        const scale = Math.max(1, 2000 / Math.max(img.width, img.height));
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext("2d")!;
+
+        // Draw scaled image
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        // Convert to grayscale and increase contrast
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        for (let i = 0; i < data.length; i += 4) {
+          // Grayscale
+          const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+          // Increase contrast
+          const contrast = 1.5;
+          const adjusted = Math.min(255, Math.max(0, (gray - 128) * contrast + 128));
+          // Threshold for sharper text
+          const final = adjusted > 140 ? 255 : 0;
+          data[i] = final;
+          data[i + 1] = final;
+          data[i + 2] = final;
+        }
+        ctx.putImageData(imageData, 0, 0);
+
+        resolve(canvas.toDataURL("image/png"));
+      };
+      img.src = URL.createObjectURL(file);
+    });
   }
 
   function buildAddress(data: Record<string, string>): string {
