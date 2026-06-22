@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     // Send compressed URL to OCR.space
     const ocrForm = new URLSearchParams();
     ocrForm.append("url", compressedUrl);
-    ocrForm.append("language", "ind");
+    ocrForm.append("language", "eng");
     ocrForm.append("isOverlayRequired", "false");
     ocrForm.append("OCREngine", "2");
     ocrForm.append("scale", "true");
