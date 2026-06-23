@@ -140,7 +140,29 @@ function parseKtpText(text: string): { nik: string; nama: string; alamat: string
   // Clean nama
   nama = nama.replace(/[^A-Za-z\s.',-]/g, "").replace(/\s+/g, " ").trim();
 
-  // Extract Alamat - gabungkan dengan RT/RW, Kel, Kec
+  // Extract Provinsi & Kabupaten/Kota from header (usually first 2 lines of KTP)
+  let provinsi = "";
+  let kabupaten = "";
+
+  for (const line of lines) {
+    // "PROVINSI JAWA BARAT" or "PROP. JAWA BARAT"
+    const provMatch = line.match(/PROP(?:INSI)?\s*[.:]?\s*(.+)/i);
+    if (provMatch && !provinsi) {
+      provinsi = provMatch[1].trim();
+      continue;
+    }
+    // "KABUPATEN SUMEDANG" or "KOTA BANDUNG" or "KAB. SUMEDANG"
+    const kabMatch = line.match(/(?:KABUPATEN|KAB|KOTA)\s*[.:]?\s*(.+)/i);
+    if (kabMatch && !kabupaten) {
+      kabupaten = kabMatch[1].trim();
+      continue;
+    }
+    // Sometimes header just has the name without prefix - detect from position
+    // First line often: "PROVINSI JAWA BARAT"
+    // Second line often: "KABUPATEN SUMEDANG"
+  }
+
+  // Extract address fields
   let alamat = "";
   let rtRw = "";
   let kelDesa = "";
@@ -162,25 +184,39 @@ function parseKtpText(text: string): { nik: string; nama: string; alamat: string
       }
     }
 
-    // RT/RW
-    const rtMatch = line.match(/RT\s*[\/\\]\s*RW\s*[:\-]?\s*(.+)/i);
-    if (rtMatch) rtRw = rtMatch[1].trim();
+    // RT/RW - multiple patterns
+    if (!rtRw) {
+      const rtMatch = line.match(/RT\s*[\/\\]?\s*RW\s*[:\-]?\s*(.+)/i);
+      if (rtMatch) rtRw = rtMatch[1].trim();
+      // Also try: "026/008" on its own line after RT/RW label
+      const rtMatch2 = line.match(/^(\d{3})\s*[\/\\]\s*(\d{3})$/);
+      if (rtMatch2) rtRw = `${rtMatch2[1]}/${rtMatch2[2]}`;
+    }
 
-    // Kel/Desa
-    const kelMatch = line.match(/Kel\s*[\/\\]?\s*Desa\s*[:\-]?\s*(.+)/i);
-    if (kelMatch) kelDesa = kelMatch[1].trim();
+    // Kel/Desa - multiple patterns
+    if (!kelDesa) {
+      const kelMatch = line.match(/Kel(?:urahan)?\s*[\/\\]?\s*Desa\s*[:\-]?\s*(.+)/i);
+      if (kelMatch) kelDesa = kelMatch[1].trim();
+      // Alternative: "Kel. LEGOK KIDUL" or "Desa LEGOK KIDUL"
+      const kelMatch2 = line.match(/(?:^Kel\.?|^Desa)\s*[:\-]?\s*(.+)/i);
+      if (kelMatch2 && !kelDesa) kelDesa = kelMatch2[1].trim();
+    }
 
     // Kecamatan
-    const kecMatch = line.match(/Kecamatan\s*[:\-]?\s*(.+)/i);
-    if (kecMatch) kecamatan = kecMatch[1].trim();
+    if (!kecamatan) {
+      const kecMatch = line.match(/Kec(?:amatan)?\s*[.:\-]?\s*(.+)/i);
+      if (kecMatch) kecamatan = kecMatch[1].trim();
+    }
   }
 
-  // Build full address
+  // Build full address with all parts
   const addressParts: string[] = [];
   if (alamat) addressParts.push(alamat);
   if (rtRw) addressParts.push(`RT/RW ${rtRw}`);
   if (kelDesa) addressParts.push(`Kel. ${kelDesa}`);
   if (kecamatan) addressParts.push(`Kec. ${kecamatan}`);
+  if (kabupaten) addressParts.push(kabupaten.includes("KOTA") ? kabupaten : `Kab. ${kabupaten}`);
+  if (provinsi) addressParts.push(`Prov. ${provinsi}`);
 
   const fullAddress = addressParts.join(", ");
 
