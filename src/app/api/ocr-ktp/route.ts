@@ -109,31 +109,64 @@ function parseKtpText(text: string): { nik: string; nama: string; alamat: string
   const lines = text.split(/[\n\r]+/).map((l) => l.trim()).filter(Boolean);
   console.log("Parsed lines:", lines);
 
-  // Extract NIK (16 digits)
+  // Extract NIK (16 digits) - more tolerant
   let nik = "";
   for (const line of lines) {
+    // Direct 16 digit match
     const nikMatch = line.match(/(\d{16})/);
     if (nikMatch) {
       nik = nikMatch[1];
       break;
     }
-    // Digits with spaces/dots
-    const cleaned = line.replace(/[\s.\-]/g, "");
+    // Digits with spaces/dots/dashes (common OCR artifacts)
+    const cleaned = line.replace(/[\s.\-,O]/g, (m) => m === "O" ? "0" : ""); // OCR often reads 0 as O
     const digitsOnly = cleaned.replace(/[^0-9]/g, "");
     if (digitsOnly.length >= 16 && /NIK|^\d/.test(line)) {
       nik = digitsOnly.slice(0, 16);
       break;
     }
+    // Line with "NIK" label followed by digits on same or next line
+    if (/NIK/i.test(line)) {
+      const afterNik = line.replace(/.*NIK\s*[:\-.]?\s*/i, "").replace(/[\s.\-]/g, "");
+      const nikDigits = afterNik.replace(/[^0-9]/g, "");
+      if (nikDigits.length >= 16) {
+        nik = nikDigits.slice(0, 16);
+        break;
+      }
+    }
+  }
+  // Second pass: if no NIK found, look for any 16-digit sequence anywhere
+  if (!nik) {
+    for (const line of lines) {
+      const allDigits = line.replace(/[^0-9]/g, "");
+      if (allDigits.length === 16) {
+        nik = allDigits;
+        break;
+      }
+    }
   }
 
-  // Extract Nama
+  // Extract Nama - more tolerant matching
   let nama = "";
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    const namaMatch = line.match(/Nama\s*[:\-]\s*(.+)/i);
-    if (namaMatch && !/tempat|lahir/i.test(namaMatch[1])) {
-      nama = namaMatch[1].trim();
-      break;
+    // Match: "Nama : BUDI", "Nama: BUDI", "Nama - BUDI", "Nama BUDI", "Narna : BUDI"
+    const namaMatch = line.match(/N[ao]m[ao]\s*[:\-.]?\s*(.+)/i);
+    if (namaMatch && !/tempat|lahir|Ibu|Ayah/i.test(namaMatch[1])) {
+      const candidate = namaMatch[1].trim();
+      // Must have at least 2 letters to be a valid name
+      if (candidate.replace(/[^A-Za-z]/g, "").length >= 2) {
+        nama = candidate;
+        break;
+      }
+    }
+    // Fallback: line right after a line that contains just "Nama" or similar
+    if (/^N[ao]m[ao]\s*[:\-.]?\s*$/i.test(line) && i + 1 < lines.length) {
+      const nextLine = lines[i + 1].trim();
+      if (nextLine.replace(/[^A-Za-z]/g, "").length >= 2 && !/^(Tempat|NIK|Jenis)/i.test(nextLine)) {
+        nama = nextLine;
+        break;
+      }
     }
   }
 
