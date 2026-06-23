@@ -1,15 +1,17 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { Booking, Expense, ExpenseType, Car } from "@/lib/types";
+import type { Booking, Expense, ExpenseType, Car, AdditionalFine } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody } from "@/components/ui/Card";
 import { Input, Select } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { StatCard } from "@/components/ui/StatCard";
+import { Modal } from "@/components/ui/Modal";
 import {
   formatRupiah,
   formatTanggal,
+  formatTanggalWaktu,
   paymentStatusLabel,
   expenseTypeLabel,
   expenseTypeIcon,
@@ -33,6 +35,7 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
   const [tab, setTab] = useState<Tab>("monthly");
   const [month, setMonth] = useState(now.getMonth());
   const [year, setYear] = useState(now.getFullYear());
+  const [detailBooking, setDetailBooking] = useState<Booking | null>(null);
 
   const years = useMemo(() => {
     const set = new Set<number>([now.getFullYear()]);
@@ -330,6 +333,12 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
                         </div>
                         <span className="text-base font-bold text-slate-900">{formatRupiah(totalWithFine)}</span>
                       </div>
+                      <button
+                        onClick={() => setDetailBooking(b)}
+                        className="mt-2 w-full rounded-lg bg-blue-600 py-2 text-xs font-semibold text-white hover:bg-blue-700 active:bg-blue-800 transition-colors"
+                      >
+                        Lihat Detail
+                      </button>
                     </div>
                   );
                 })
@@ -588,6 +597,12 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
                   {item.car?.commission_note && (
                     <p className="mt-2 text-xs text-slate-400">📝 {item.car.commission_note}</p>
                   )}
+                  <button
+                    onClick={() => setDetailBooking(item.booking)}
+                    className="mt-2 w-full rounded-lg bg-amber-600 py-2 text-xs font-semibold text-white hover:bg-amber-700 active:bg-amber-800 transition-colors"
+                  >
+                    Lihat Detail
+                  </button>
                 </div>
               ))
             )}
@@ -804,6 +819,106 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
           </Card>
         </div>
       )}
+
+      {/* Detail Booking Modal - Colorful */}
+      <Modal open={!!detailBooking} onClose={() => setDetailBooking(null)} title="Detail Transaksi" size="lg">
+        {detailBooking && (() => {
+          const b = detailBooking;
+          const lateFee = Number(b.late_fee || 0);
+          let fines: AdditionalFine[] = [];
+          try { fines = b.additional_fines ? JSON.parse(b.additional_fines) : []; } catch { /* */ }
+          const finesTotal = fines.reduce((s, f) => s + (f.amount || 0), 0);
+          const grandTotal = Number(b.total_cost) + lateFee + finesTotal;
+          const car = cars.find((c) => c.id === b.car_id);
+          const commissionPercent = car?.commission_percent ?? 0;
+          const commissionAmount = Math.round(grandTotal * commissionPercent / 100);
+
+          return (
+            <div className="space-y-3 text-sm">
+              {/* Status */}
+              <div className="flex flex-wrap gap-2">
+                <span className={`rounded-full px-3 py-1 text-xs font-bold text-white ${b.payment_status === "paid" ? "bg-emerald-500" : "bg-amber-500"}`}>
+                  {b.payment_status === "paid" ? "LUNAS" : "BELUM BAYAR"}
+                </span>
+                <span className={`rounded-full px-3 py-1 text-xs font-bold text-white ${b.actual_return_date ? "bg-slate-500" : "bg-blue-500"}`}>
+                  {b.actual_return_date ? "SELESAI" : "BERJALAN"}
+                </span>
+              </div>
+
+              {/* Pelanggan */}
+              <div className="rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 p-3 text-white">
+                <p className="text-[10px] font-bold uppercase opacity-80">Pelanggan</p>
+                <p className="text-base font-bold">{b.customers?.name ?? "-"}</p>
+                <p className="text-xs opacity-90">NIK: {b.customers?.nik ?? "-"} · HP: {b.customers?.phone ?? "-"}</p>
+              </div>
+
+              {/* Kendaraan */}
+              <div className="rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 p-3 text-white">
+                <p className="text-[10px] font-bold uppercase opacity-80">Kendaraan</p>
+                <p className="text-base font-bold">{b.cars?.brand} {b.cars?.model}</p>
+                <p className="text-xs opacity-90">Plat: {b.cars?.plate} · Tarif: {formatRupiah(b.cars?.tariff_per_day ?? 0)}/hari</p>
+              </div>
+
+              {/* Periode */}
+              <div className="rounded-xl bg-gradient-to-r from-teal-500 to-teal-600 p-3 text-white">
+                <p className="text-[10px] font-bold uppercase opacity-80">Periode Sewa</p>
+                <p className="font-bold">{formatTanggal(b.start_date)} → {formatTanggal(b.end_date)} ({b.duration_days} hari)</p>
+                {b.actual_return_date && <p className="text-xs opacity-90 mt-0.5">Dikembalikan: {formatTanggalWaktu(b.actual_return_date)}</p>}
+              </div>
+
+              {/* Rincian Biaya */}
+              <div className="rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 p-3 text-white">
+                <p className="text-[10px] font-bold uppercase opacity-80">Rincian Biaya</p>
+                <div className="mt-1 space-y-1 text-xs">
+                  <div className="flex justify-between">
+                    <span>Sewa {b.duration_days} hari × {formatRupiah(b.cars?.tariff_per_day ?? 0)}</span>
+                    <span className="font-bold">{formatRupiah(Number(b.total_cost))}</span>
+                  </div>
+                  {lateFee > 0 && (
+                    <div className="flex justify-between bg-white/20 rounded px-2 py-0.5">
+                      <span>Denda Keterlambatan</span>
+                      <span className="font-bold">{formatRupiah(lateFee)}</span>
+                    </div>
+                  )}
+                  {fines.map((f, i) => (
+                    <div key={i} className="flex justify-between bg-white/20 rounded px-2 py-0.5">
+                      <span>Denda: {f.label || f.type}</span>
+                      <span className="font-bold">{formatRupiah(f.amount)}</span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between border-t border-white/40 pt-1 text-sm font-bold">
+                    <span>TOTAL</span>
+                    <span>{formatRupiah(grandTotal)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Komisi Admin */}
+              {commissionPercent > 0 && (
+                <div className="rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 p-3 text-white">
+                  <p className="text-[10px] font-bold uppercase opacity-80">Komisi Admin ({commissionPercent}%)</p>
+                  <p className="text-lg font-black mt-0.5">{formatRupiah(commissionAmount)}</p>
+                  {car?.commission_note && <p className="text-xs opacity-80 mt-0.5">📝 {car.commission_note}</p>}
+                </div>
+              )}
+
+              {b.notes && (
+                <div className="rounded-xl bg-slate-100 p-3">
+                  <p className="text-[10px] font-bold uppercase text-slate-400">Catatan</p>
+                  <p className="text-slate-700">{b.notes}</p>
+                </div>
+              )}
+
+              <button
+                onClick={() => setDetailBooking(null)}
+                className="w-full rounded-lg border border-slate-200 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+              >
+                Tutup
+              </button>
+            </div>
+          );
+        })()}
+      </Modal>
     </div>
   );
 }
