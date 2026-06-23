@@ -309,20 +309,11 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
             <div className="flex flex-col sm:flex-row gap-3 items-start">
               {/* Upload Area */}
               <div className="relative flex-1 w-full">
-                {/* Hidden file input - gallery/file picker */}
+                {/* Single file input - on mobile, browser shows Camera/Gallery options automatically */}
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
-                {/* Hidden camera input - direct camera capture on mobile */}
-                <input
-                  id="camera-input"
-                  type="file"
                   accept="image/*"
-                  capture="environment"
                   onChange={handleFileSelect}
                   className="hidden"
                 />
@@ -337,29 +328,21 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
                     </div>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-2">
-                    {/* Camera button - primarily for mobile */}
-                    <button
-                      type="button"
-                      className="border-2 border-dashed border-slate-300 rounded-lg p-3 text-center hover:border-blue-400 hover:bg-blue-50/50 transition-colors cursor-pointer flex flex-col items-center gap-1.5"
-                      onClick={() => document.getElementById("camera-input")?.click()}
-                    >
-                      <Camera className="h-5 w-5 text-slate-500" />
-                      <span className="text-xs text-slate-600">Foto Langsung</span>
-                    </button>
-                    {/* Upload from gallery/file */}
-                    <button
-                      type="button"
-                      className="border-2 border-dashed border-slate-300 rounded-lg p-3 text-center hover:border-blue-400 hover:bg-blue-50/50 transition-colors cursor-pointer flex flex-col items-center gap-1.5"
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      <Upload className="h-5 w-5 text-slate-500" />
-                      <span className="text-xs text-slate-600">Pilih File</span>
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    className="w-full border-2 border-dashed border-slate-300 rounded-lg p-4 text-center hover:border-blue-400 hover:bg-blue-50/50 transition-colors cursor-pointer flex flex-col items-center gap-2"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <div className="flex items-center gap-2 text-slate-500">
+                      <Camera className="h-5 w-5" />
+                      <Upload className="h-5 w-5" />
+                    </div>
+                    <span className="text-sm text-slate-600">Foto / Upload KTP</span>
+                    <span className="text-xs text-slate-400">Kamera atau pilih dari galeri</span>
+                  </button>
                 )}
                 <p className="text-xs text-slate-400 mt-1.5 text-center">
-                  JPG, PNG, WebP (maks 5MB)
+                  JPG, PNG, WebP
                 </p>
               </div>
 
