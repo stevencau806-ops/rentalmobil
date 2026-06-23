@@ -421,15 +421,24 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
                 <p className="mb-2 text-xs font-semibold uppercase text-violet-600">Rincian Admin %</p>
                 <div className="space-y-2">
                   {commissionData.monthCommissions.map((item) => (
-                    <div key={item.booking.id} className="rounded-xl border border-violet-200 bg-violet-50/50 px-4 py-3">
+                    <div key={item.booking.id} className="rounded-xl border border-violet-200 bg-gradient-to-r from-violet-50 to-purple-50 px-4 py-3 shadow-sm">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm font-medium text-slate-900">{item.booking.customers?.name}</p>
-                          <p className="text-xs text-slate-500">{item.car?.brand} {item.car?.model} · {item.percent}%</p>
-                          {item.car?.commission_note && <p className="text-xs text-violet-600">{item.car.commission_note}</p>}
+                          <p className="text-sm font-semibold text-slate-900">{item.booking.customers?.name}</p>
+                          <p className="text-xs text-slate-500">{item.car?.brand} {item.car?.model} · {item.car?.plate}</p>
+                          {item.car?.commission_note && <p className="text-xs text-violet-600 mt-0.5">📝 {item.car.commission_note}</p>}
                         </div>
-                        <p className="text-sm font-bold text-violet-700">{formatRupiah(item.commissionAmount)}</p>
+                        <div className="text-right">
+                          <p className="text-sm font-bold text-violet-700">{formatRupiah(item.commissionAmount)}</p>
+                          <span className="inline-block rounded-full bg-violet-500 px-2 py-0.5 text-[10px] font-bold text-white">{item.percent}%</span>
+                        </div>
                       </div>
+                      <button
+                        onClick={() => setDetailBooking(item.booking)}
+                        className="mt-2 w-full rounded-lg bg-violet-600 py-2 text-xs font-semibold text-white hover:bg-violet-700 active:bg-violet-800 transition-colors"
+                      >
+                        Lihat Detail
+                      </button>
                     </div>
                   ))}
                 </div>
