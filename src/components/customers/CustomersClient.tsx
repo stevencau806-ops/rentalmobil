@@ -81,28 +81,35 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
     const localUrl = URL.createObjectURL(file);
     setPreviewUrl(localUrl);
 
-    // Upload to Cloudinary directly (no client-side compress - Cloudinary handles it)
+    // Upload directly to Cloudinary from browser (bypass Vercel - no size limit)
     setUploading(true);
     try {
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("upload_preset", "ktp_upload");
+      formData.append("folder", "ktp");
 
-      const res = await fetch("/api/upload-ktp", { method: "POST", body: formData });
-      const data = await res.json();
+      const res = await fetch(
+        "https://api.cloudinary.com/v1_1/dfxc4ceya/image/upload",
+        { method: "POST", body: formData }
+      );
 
       if (!res.ok) {
-        toast(data.error || "Gagal upload foto KTP", "error");
+        toast("Gagal upload foto KTP", "error");
         setPreviewUrl(null);
         setUploading(false);
         return;
       }
 
-      setForm((prev) => ({ ...prev, ktp_url: data.url }));
-      setPreviewUrl(data.url);
+      const data = await res.json();
+      const url = data.secure_url as string;
+
+      setForm((prev) => ({ ...prev, ktp_url: url }));
+      setPreviewUrl(url);
       toast("Foto KTP berhasil diupload", "success");
 
       // Auto-extract KTP data using Cloudinary URL
-      await extractKtpData(data.url);
+      await extractKtpData(url);
     } catch {
       toast("Gagal upload foto KTP", "error");
       setPreviewUrl(null);
@@ -309,11 +316,20 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
             <div className="flex flex-col sm:flex-row gap-3 items-start">
               {/* Upload Area */}
               <div className="relative flex-1 w-full">
-                {/* Single file input - on mobile, browser shows Camera/Gallery options automatically */}
+                {/* File input for gallery/file picker */}
                 <input
                   ref={fileInputRef}
                   type="file"
                   accept="image/*"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                {/* Camera input - forces camera on mobile */}
+                <input
+                  id="ktp-camera-input"
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
                   onChange={handleFileSelect}
                   className="hidden"
                 />
@@ -328,21 +344,27 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
                     </div>
                   </div>
                 ) : (
-                  <button
-                    type="button"
-                    className="w-full border-2 border-dashed border-slate-300 rounded-lg p-4 text-center hover:border-blue-400 hover:bg-blue-50/50 transition-colors cursor-pointer flex flex-col items-center gap-2"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <div className="flex items-center gap-2 text-slate-500">
-                      <Camera className="h-5 w-5" />
-                      <Upload className="h-5 w-5" />
-                    </div>
-                    <span className="text-sm text-slate-600">Foto / Upload KTP</span>
-                    <span className="text-xs text-slate-400">Kamera atau pilih dari galeri</span>
-                  </button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      className="border-2 border-dashed border-slate-300 rounded-lg p-3 text-center hover:border-blue-400 hover:bg-blue-50/50 transition-colors cursor-pointer flex flex-col items-center gap-1.5"
+                      onClick={() => document.getElementById("ktp-camera-input")?.click()}
+                    >
+                      <Camera className="h-5 w-5 text-blue-500" />
+                      <span className="text-xs text-slate-600 font-medium">Foto Langsung</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="border-2 border-dashed border-slate-300 rounded-lg p-3 text-center hover:border-blue-400 hover:bg-blue-50/50 transition-colors cursor-pointer flex flex-col items-center gap-1.5"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <Upload className="h-5 w-5 text-emerald-500" />
+                      <span className="text-xs text-slate-600 font-medium">Pilih File</span>
+                    </button>
+                  </div>
                 )}
                 <p className="text-xs text-slate-400 mt-1.5 text-center">
-                  JPG, PNG, WebP
+                  JPG, PNG, WebP — langsung upload ke cloud
                 </p>
               </div>
 
