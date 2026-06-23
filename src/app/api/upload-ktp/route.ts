@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 
+// Allow larger body for file uploads
+export const runtime = "nodejs";
+
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
@@ -19,20 +22,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
+    // Validate file size (max 10MB - Cloudinary free tier supports up to 10MB)
+    if (file.size > 10 * 1024 * 1024) {
       return NextResponse.json(
-        { error: "Ukuran file maksimal 5MB" },
+        { error: "Ukuran file maksimal 10MB" },
         { status: 400 }
       );
     }
 
-    // Convert file to base64 for Cloudinary upload
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    const base64 = `data:${file.type};base64,${buffer.toString("base64")}`;
-
-    // Upload to Cloudinary via REST API
     const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
     const apiKey = process.env.CLOUDINARY_API_KEY;
     const apiSecret = process.env.CLOUDINARY_API_SECRET;
@@ -44,15 +41,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Generate signature (Cloudinary uses SHA-1)
+    // Generate signature
     const timestamp = Math.round(Date.now() / 1000);
     const folder = "ktp";
     const signatureStr = `folder=${folder}&timestamp=${timestamp}${apiSecret}`;
     const signature = crypto.createHash("sha1").update(signatureStr).digest("hex");
 
-    // Upload to Cloudinary
+    // Upload file directly to Cloudinary (not base64 - more efficient)
     const uploadForm = new FormData();
-    uploadForm.append("file", base64);
+    uploadForm.append("file", file);
     uploadForm.append("folder", folder);
     uploadForm.append("timestamp", timestamp.toString());
     uploadForm.append("api_key", apiKey);
