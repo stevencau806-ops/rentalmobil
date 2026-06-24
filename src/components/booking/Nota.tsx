@@ -63,7 +63,7 @@ export function Nota({ booking, appName = "Erlangga Rental Mobil", phone, notaTe
     <div className="bg-white px-3 py-2 font-mono text-[10px] leading-tight text-black" id="nota-print-area">
       {/* Header */}
       <div className="text-center">
-        <img src="https://res.cloudinary.com/dqjh7utdb/image/upload/v1782311347/u5zbqafgubkyjckrjseq.png" alt={appName} className="mx-auto h-10 w-auto" />
+        <img src="https://res.cloudinary.com/dqjh7utdb/image/upload/v1782311347/u5zbqafgubkyjckrjseq.png" alt={appName} className="mx-auto h-16 w-auto" />
         <p className="font-bold">{appName}</p>
         {phone && <p className="text-[9px]">{phone}</p>}
       </div>
@@ -111,8 +111,7 @@ export function Nota({ booking, appName = "Erlangga Rental Mobil", phone, notaTe
           <span>{formatRupiah(fine.amount)}</span>
         </div>
       ))}
-      <p className="text-center text-[8px] text-gray-400">{line}</p>
-      <div className="flex justify-between font-bold text-[11px]">
+      <div className="mt-1 flex justify-between font-bold text-[11px]">
         <span>TOTAL</span>
         <span>{formatRupiah(total)}</span>
       </div>
