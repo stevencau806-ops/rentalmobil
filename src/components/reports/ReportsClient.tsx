@@ -36,6 +36,7 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
   const [month, setMonth] = useState(now.getMonth());
   const [year, setYear] = useState(now.getFullYear());
   const [detailBooking, setDetailBooking] = useState<Booking | null>(null);
+  const [selectedCar, setSelectedCar] = useState<{ car: Car; bookings: Booking[] } | null>(null);
 
   const years = useMemo(() => {
     const set = new Set<number>([now.getFullYear()]);
@@ -173,9 +174,90 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
     return { monthCommissions, yearCommissions, monthTotal, yearTotal };
   }, [bookings, cars, month, year]);
 
-  // Net profit (after commission)
-  const monthNetProfit = monthRevenue - monthExpenses - commissionData.monthTotal;
-  const yearNetProfit = yearRevenue - yearExpenses - commissionData.yearTotal;
+
+  // ---- Car performance stats (monthly) ----
+  const monthCarStats = useMemo(() => {
+    return cars
+      .map((car) => {
+        const carBookings = monthBookings.filter((b) => b.car_id === car.id);
+        const totalRevenue = carBookings.reduce(
+          (s, b) => s + Number(b.total_cost) + Number(b.late_fee || 0),
+          0
+        );
+        const commissionPercent = Number(car.commission_percent || 0);
+        const totalCommission = carBookings
+          .filter((b) => b.actual_return_date)
+          .reduce((s, b) => {
+            const cost = Number(b.total_cost);
+            const late = Number(b.late_fee || 0);
+            let fines = 0;
+            if (b.additional_fines) {
+              try {
+                const parsed = JSON.parse(b.additional_fines) as { amount: number }[];
+                fines = parsed.reduce((x, f) => x + (f.amount || 0), 0);
+              } catch { /* ignore */ }
+            }
+            return s + Math.round((cost + late + fines) * commissionPercent / 100);
+          }, 0);
+        return {
+          car,
+          totalRevenue,
+          totalCommission,
+          bookingCount: carBookings.length,
+        };
+      })
+      .filter((c) => c.bookingCount > 0);
+  }, [cars, monthBookings]);
+
+  // ---- Car performance stats (yearly) ----
+  const yearCarStats = useMemo(() => {
+    return cars
+      .map((car) => {
+        const carBookings = yearBookings.filter((b) => b.car_id === car.id);
+        const totalRevenue = carBookings.reduce(
+          (s, b) => s + Number(b.total_cost) + Number(b.late_fee || 0),
+          0
+        );
+        const commissionPercent = Number(car.commission_percent || 0);
+        const totalCommission = carBookings
+          .filter((b) => b.actual_return_date)
+          .reduce((s, b) => {
+            const cost = Number(b.total_cost);
+            const late = Number(b.late_fee || 0);
+            let fines = 0;
+            if (b.additional_fines) {
+              try {
+                const parsed = JSON.parse(b.additional_fines) as { amount: number }[];
+                fines = parsed.reduce((x, f) => x + (f.amount || 0), 0);
+              } catch { /* ignore */ }
+            }
+            return s + Math.round((cost + late + fines) * commissionPercent / 100);
+          }, 0);
+        return {
+          car,
+          totalRevenue,
+          totalCommission,
+          bookingCount: carBookings.length,
+        };
+      })
+      .filter((c) => c.bookingCount > 0);
+  }, [cars, yearBookings]);
+
+  // Colorful solid backgrounds for car cards (not gradients)
+  const carColors = [
+    "bg-blue-500",
+    "bg-emerald-500",
+    "bg-amber-500",
+    "bg-rose-500",
+    "bg-violet-500",
+    "bg-cyan-500",
+    "bg-orange-500",
+    "bg-teal-500",
+    "bg-indigo-500",
+    "bg-pink-500",
+    "bg-lime-500",
+    "bg-red-500",
+  ];
 
   const tabs: { key: Tab; label: string; icon: string }[] = [
     { key: "monthly", label: "Bulanan", icon: "📅" },
@@ -250,20 +332,13 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
           </div>
 
           {/* Stat Cards with hints */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <StatCard
               label="Pendapatan"
               value={formatRupiah(monthRevenue)}
               icon="💰"
               tone="green"
               hint={monthBookings.length > 0 ? `${monthBookings.length} transaksi` : "Belum ada transaksi"}
-            />
-            <StatCard
-              label="Laba Bersih"
-              value={formatRupiah(monthNetProfit)}
-              icon="📈"
-              tone={monthNetProfit >= 0 ? "blue" : "red"}
-              hint="Pendapatan - Pengeluaran - Komisi"
             />
             <StatCard
               label="Pengeluaran"
@@ -274,14 +349,58 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
             />
           </div>
 
-          {/* Keterangan ringkas */}
-          <div className="rounded-xl bg-blue-50 border border-blue-200 p-3 text-xs text-blue-700">
-            <p className="font-semibold mb-1">Cara baca laporan:</p>
-            <ul className="list-disc pl-4 space-y-0.5 text-blue-600">
-              <li><strong>Pendapatan</strong> = total uang masuk dari sewa + denda</li>
-              <li><strong>Pengeluaran</strong> = biaya service, pajak, dll</li>
-              <li><strong>Laba Bersih</strong> = Pendapatan - Pengeluaran - Komisi pemilik mobil</li>
-            </ul>
+          {/* Car Performance Cards */}
+          <div>
+            <h3 className="text-sm font-semibold text-slate-700 mb-2">
+              Ringkasan per Mobil — {namaBulan[month]} {year}
+            </h3>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {monthCarStats.length === 0 ? (
+                <div className="col-span-full rounded-xl border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-400">
+                  Belum ada data mobil pada bulan ini.
+                </div>
+              ) : (
+                monthCarStats.map((item, idx) => {
+                  const colorClass = carColors[idx % carColors.length];
+                  return (
+                    <div
+                      key={item.car.id}
+                      className={`cursor-pointer rounded-2xl ${colorClass} p-4 text-white shadow-sm transition-transform hover:scale-[1.02] active:scale-[0.98]`}
+                      onClick={() =>
+                        setSelectedCar({
+                          car: item.car,
+                          bookings: monthBookings.filter((b) => b.car_id === item.car.id),
+                        })
+                      }
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-bold truncate">
+                            {item.car.brand} {item.car.model}
+                          </p>
+                          <p className="text-[11px] opacity-90">{item.car.plate}</p>
+                        </div>
+                        <span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold">
+                          {item.bookingCount}x sewa
+                        </span>
+                      </div>
+                      <div className="mt-3 space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span className="opacity-90">Pendapatan</span>
+                          <span className="font-bold">{formatRupiah(item.totalRevenue)}</span>
+                        </div>
+                        {item.car.commission_percent > 0 && (
+                          <div className="flex justify-between text-xs">
+                            <span className="opacity-90">Admin</span>
+                            <span className="font-bold">{formatRupiah(item.totalCommission)}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
 
           {/* Mobile: Pendapatan Admin % card */}
@@ -491,18 +610,66 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
       {tab === "yearly" && (
         <div className="space-y-4">
           <h2 className="text-lg font-bold text-slate-900">Laporan Tahunan — {year}</h2>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <StatCard label="Total Pendapatan" value={formatRupiah(yearRevenue)} icon="💰" tone="green" />
             <StatCard label="Total Pengeluaran" value={formatRupiah(yearExpenses)} icon="💸" tone="red" />
             <StatCard label="Total Komisi" value={formatRupiah(commissionData.yearTotal)} icon="🤝" tone="amber" />
-            <StatCard
-              label="Laba Bersih"
-              value={formatRupiah(yearNetProfit)}
-              icon="📈"
-              tone={yearNetProfit >= 0 ? "blue" : "red"}
-              hint={`${yearBookings.length} transaksi`}
-            />
           </div>
+
+          {/* Car Performance Cards */}
+          <div>
+            <h3 className="text-sm font-semibold text-slate-700 mb-2">
+              Ringkasan per Mobil — {year}
+            </h3>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {yearCarStats.length === 0 ? (
+                <div className="col-span-full rounded-xl border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-400">
+                  Belum ada data mobil pada tahun ini.
+                </div>
+              ) : (
+                yearCarStats.map((item, idx) => {
+                  const colorClass = carColors[idx % carColors.length];
+                  return (
+                    <div
+                      key={item.car.id}
+                      className={`cursor-pointer rounded-2xl ${colorClass} p-4 text-white shadow-sm transition-transform hover:scale-[1.02] active:scale-[0.98]`}
+                      onClick={() =>
+                        setSelectedCar({
+                          car: item.car,
+                          bookings: yearBookings.filter((b) => b.car_id === item.car.id),
+                        })
+                      }
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-bold truncate">
+                            {item.car.brand} {item.car.model}
+                          </p>
+                          <p className="text-[11px] opacity-90">{item.car.plate}</p>
+                        </div>
+                        <span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold">
+                          {item.bookingCount}x sewa
+                        </span>
+                      </div>
+                      <div className="mt-3 space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span className="opacity-90">Pendapatan</span>
+                          <span className="font-bold">{formatRupiah(item.totalRevenue)}</span>
+                        </div>
+                        {item.car.commission_percent > 0 && (
+                          <div className="flex justify-between text-xs">
+                            <span className="opacity-90">Admin</span>
+                            <span className="font-bold">{formatRupiah(item.totalCommission)}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
           <Card>
             <CardBody className="p-0">
               <div className="overflow-x-auto">
@@ -512,7 +679,6 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
                       <th className="px-4 py-3">Bulan</th>
                       <th className="px-4 py-3 text-right">Pendapatan</th>
                       <th className="px-4 py-3 text-right">Pengeluaran</th>
-                      <th className="px-4 py-3 text-right">Laba</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -527,13 +693,6 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
                         <td className="px-4 py-3 text-right text-red-600">
                           {formatRupiah(row.expense)}
                         </td>
-                        <td
-                          className={`px-4 py-3 text-right font-medium ${
-                            row.profit >= 0 ? "text-slate-900" : "text-red-600"
-                          }`}
-                        >
-                          {formatRupiah(row.profit)}
-                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -545,9 +704,6 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
                       </td>
                       <td className="px-4 py-3 text-right text-red-600">
                         {formatRupiah(yearExpenses)}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        {formatRupiah(yearNetProfit)}
                       </td>
                     </tr>
                   </tfoot>
@@ -920,6 +1076,99 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
 
               <button
                 onClick={() => setDetailBooking(null)}
+                className="w-full rounded-lg border border-slate-200 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+              >
+                Tutup
+              </button>
+            </div>
+          );
+        })()}
+      </Modal>
+
+      {/* Car Rental History Modal */}
+      <Modal open={!!selectedCar} onClose={() => setSelectedCar(null)} title="Riwayat Rental Mobil" size="lg">
+        {selectedCar && (() => {
+          const { car, bookings: carBookings } = selectedCar;
+          return (
+            <div className="space-y-3">
+              <div className="rounded-xl bg-slate-100 p-3 text-sm">
+                <p className="font-bold">{car.brand} {car.model}</p>
+                <p className="text-xs text-slate-500">{car.plate}</p>
+              </div>
+
+              {/* Desktop Table */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                    <tr>
+                      <th className="px-3 py-2">Pelanggan</th>
+                      <th className="px-3 py-2">Tanggal Sewa</th>
+                      <th className="px-3 py-2 text-center">Durasi</th>
+                      <th className="px-3 py-2 text-right">Total</th>
+                      <th className="px-3 py-2">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {carBookings.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="px-3 py-6 text-center text-slate-400">
+                          Tidak ada data rental untuk mobil ini.
+                        </td>
+                      </tr>
+                    ) : (
+                      carBookings.map((b) => (
+                        <tr key={b.id}>
+                          <td className="px-3 py-2 font-medium text-slate-900">
+                            {b.customers?.name}
+                          </td>
+                          <td className="px-3 py-2 text-xs text-slate-500">
+                            {formatTanggal(b.start_date)} → {formatTanggal(b.end_date)}
+                          </td>
+                          <td className="px-3 py-2 text-center text-xs">
+                            {b.duration_days} hari
+                          </td>
+                          <td className="px-3 py-2 text-right font-medium">
+                            {formatRupiah(Number(b.total_cost) + Number(b.late_fee || 0))}
+                          </td>
+                          <td className="px-3 py-2">
+                            <Badge tone={b.payment_status === "paid" ? "green" : "yellow"}>
+                              {paymentStatusLabel[b.payment_status]}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="space-y-2 md:hidden">
+                {carBookings.map((b) => (
+                  <div
+                    key={b.id}
+                    className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm"
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold text-slate-900">
+                        {b.customers?.name}
+                      </p>
+                      <Badge tone={b.payment_status === "paid" ? "green" : "yellow"}>
+                        {paymentStatusLabel[b.payment_status]}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1">
+                      {formatTanggal(b.start_date)} → {formatTanggal(b.end_date)} · {b.duration_days} hari
+                    </p>
+                    <p className="text-sm font-bold text-slate-900 mt-1">
+                      {formatRupiah(Number(b.total_cost) + Number(b.late_fee || 0))}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setSelectedCar(null)}
                 className="w-full rounded-lg border border-slate-200 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
               >
                 Tutup
