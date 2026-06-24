@@ -230,9 +230,8 @@ export function BookingClient({
       return;
     }
 
-    // Combine booking end_date (date) as end-of-day for comparison
+    // Deadline is the end_date (datetime) directly - 24h per day from start
     const endDateTime = new Date(returnBooking.end_date);
-    endDateTime.setHours(23, 59, 0, 0);
 
     const { hoursLate, fee } = hitungDenda(actualReturn, endDateTime.toISOString(), finePerHour);
 
@@ -694,7 +693,6 @@ export function BookingClient({
 
             {returnForm.actual_return_date && (() => {
               const endDateTime = new Date(returnBooking.end_date);
-              endDateTime.setHours(23, 59, 0, 0);
               const { hoursLate, fee } = hitungDenda(
                 returnForm.actual_return_date,
                 endDateTime.toISOString(),
