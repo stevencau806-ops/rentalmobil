@@ -68,7 +68,7 @@ export function Nota({ booking, appName = "Erlangga Rental Mobil", phone, notaTe
         <div className="flex items-center gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="https://res.cloudinary.com/ddbq1mlsc/image/upload/q_auto/f_auto/v1781968644/erlangga-logo-sidebar_faalnu.png"
+            src="https://res.cloudinary.com/dqjh7utdb/image/upload/v1782311347/u5zbqafgubkyjckrjseq.png"
             alt={appName}
             className="h-10 w-auto object-contain"
           />
