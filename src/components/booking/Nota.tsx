@@ -107,8 +107,8 @@ export function Nota({ booking, appName = "Erlangga Rental Mobil", phone, notaTe
         <div className="rounded border border-slate-200 p-2">
           <p className="text-[9px] font-bold uppercase text-slate-400 mb-0.5">Periode Sewa</p>
           <p className="font-semibold">{booking.duration_days} Hari</p>
-          <p className="text-slate-500">{formatTanggal(booking.start_date)}</p>
-          <p className="text-slate-500">s/d {formatTanggal(booking.end_date)}</p>
+          <p className="text-slate-500">{formatTanggalWaktu(booking.start_date)}</p>
+          <p className="text-slate-500">s/d {formatTanggalWaktu(booking.end_date)}</p>
         </div>
       </div>
 
