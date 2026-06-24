@@ -972,44 +972,54 @@ export function BookingClient({
               const notaEl = document.getElementById("nota-print-area");
               if (!notaEl) return;
 
-              // Robust mobile print: clone nota to body-level container
-              let container = document.getElementById("print-container");
-              if (!container) {
-                container = document.createElement("div");
-                container.id = "print-container";
-                document.body.appendChild(container);
-              }
-              container.innerHTML = notaEl.outerHTML;
-              document.documentElement.classList.add("printing-nota");
-
-              const cleanup = () => {
-                document.documentElement.classList.remove("printing-nota");
-                if (container) container.innerHTML = "";
-              };
-
-              // Desktop: afterprint event fires when dialog closes
-              window.addEventListener("afterprint", cleanup, { once: true });
-
-              // Mobile fallback: matchMedia print event
-              let mql: MediaQueryList | null = null;
-              const handleMediaChange = (e: MediaQueryListEvent) => {
-                if (!e.matches) {
-                  cleanup();
-                  mql?.removeEventListener("change", handleMediaChange);
-                }
-              };
-              if (window.matchMedia) {
-                mql = window.matchMedia("print");
-                mql.addEventListener("change", handleMediaChange);
+              // Reusable print-window approach — most reliable on mobile
+              const printWindow = window.open("", "_blank");
+              if (!printWindow) {
+                toast("Browser memblokir popup. Izinkan popup untuk mencetak nota.", "error");
+                return;
               }
 
-              // Ultimate fallback: cleanup after 15s
-              setTimeout(() => {
-                cleanup();
-                mql?.removeEventListener("change", handleMediaChange);
-              }, 15000);
+              // Copy all inline stylesheets from current page so Tailwind/utilities work
+              const styles = Array.from(document.querySelectorAll("style, link[rel='stylesheet']"))
+                .map((el) => el.outerHTML)
+                .join("\n");
 
-              window.print();
+              const html = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                  <meta charset="utf-8" />
+                  <meta name="viewport" content="width=device-width, initial-scale=1" />
+                  <title>Nota Sewa</title>
+                  ${styles}
+                  <style>
+                    @page { size: 80mm auto; margin: 2mm; }
+                    body { background: white !important; margin: 0 !important; padding: 0 !important; }
+                    #nota-print-area {
+                      width: 72mm !important;
+                      max-width: 72mm !important;
+                      margin: 0 auto !important;
+                      padding: 2mm !important;
+                      overflow: visible !important;
+                      page-break-inside: avoid !important;
+                    }
+                  </style>
+                </head>
+                <body>
+                  ${notaEl.outerHTML}
+                  <script>
+                    window.addEventListener("load", function() {
+                      setTimeout(function() { window.print(); }, 400);
+                      setTimeout(function() { window.close(); }, 30000);
+                    });
+                  </script>
+                </body>
+                </html>
+              `;
+
+              printWindow.document.open();
+              printWindow.document.write(html);
+              printWindow.document.close();
             }}>
               <span className="inline-flex items-center gap-1.5">
                 <Printer className="h-4 w-4" />
