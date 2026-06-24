@@ -57,20 +57,17 @@ body {
 
   /* ===== NOTA PRINT (Booking page) ===== */
   /* Class added by JS before printing */
-  .printing-nota aside,
-  .printing-nota nav,
-  .printing-nota header,
-  .printing-nota .no-print,
-  .printing-nota > *:not(:has(#nota-print-area)) {
+  body.printing-nota > *:not(#print-container) {
     display: none !important;
   }
 
-  /* Fallback: hide all direct body children except the modal overlay */
-  .printing-nota [data-radix-portal],
-  .printing-nota [role="dialog"] {
+  body.printing-nota #print-container {
     display: block !important;
     position: static !important;
     overflow: visible !important;
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   /* The nota itself */
@@ -165,7 +162,8 @@ body {
   }
 }
 
-.print-only {
+.print-only,
+#print-container {
   display: none;
 }
 
