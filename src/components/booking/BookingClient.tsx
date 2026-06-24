@@ -972,16 +972,17 @@ export function BookingClient({
               const notaEl = document.getElementById("nota-print-area");
               if (!notaEl) return;
 
-              // Reusable print-window approach — most reliable on mobile
-              const printWindow = window.open("", "_blank");
-              if (!printWindow) {
-                toast("Browser memblokir popup. Izinkan popup untuk mencetak nota.", "error");
-                return;
-              }
-
-              // Copy all inline stylesheets from current page so Tailwind/utilities work
-              const styles = Array.from(document.querySelectorAll("style, link[rel='stylesheet']"))
+              // Collect inline <style> tags
+              const inlineStyles = Array.from(document.querySelectorAll("style"))
                 .map((el) => el.outerHTML)
+                .join("\n");
+
+              // Convert <link rel="stylesheet"> to absolute URLs so they load in blob
+              const linkStyles = Array.from(document.querySelectorAll("link[rel='stylesheet']"))
+                .map((el) => {
+                  const href = (el as HTMLLinkElement).href;
+                  return `<link rel="stylesheet" href="${href}" />`;
+                })
                 .join("\n");
 
               const html = `
@@ -991,7 +992,8 @@ export function BookingClient({
                   <meta charset="utf-8" />
                   <meta name="viewport" content="width=device-width, initial-scale=1" />
                   <title>Nota Sewa</title>
-                  ${styles}
+                  ${linkStyles}
+                  ${inlineStyles}
                   <style>
                     @page { size: 80mm auto; margin: 2mm; }
                     body { background: white !important; margin: 0 !important; padding: 0 !important; }
@@ -1000,6 +1002,7 @@ export function BookingClient({
                       max-width: 72mm !important;
                       margin: 0 auto !important;
                       padding: 2mm !important;
+                      background: white !important;
                       overflow: visible !important;
                       page-break-inside: avoid !important;
                     }
@@ -1008,18 +1011,34 @@ export function BookingClient({
                 <body>
                   ${notaEl.outerHTML}
                   <script>
-                    window.addEventListener("load", function() {
-                      setTimeout(function() { window.print(); }, 400);
-                      setTimeout(function() { window.close(); }, 30000);
-                    });
+                    (function() {
+                      function tryPrint() {
+                        if (document.readyState === "complete") {
+                          setTimeout(function() { window.print(); }, 300);
+                        } else {
+                          window.addEventListener("load", function() {
+                            setTimeout(function() { window.print(); }, 300);
+                          });
+                        }
+                      }
+                      tryPrint();
+                    })();
                   </script>
                 </body>
                 </html>
               `;
 
-              printWindow.document.open();
-              printWindow.document.write(html);
-              printWindow.document.close();
+              const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+              const url = URL.createObjectURL(blob);
+              const printWindow = window.open(url, "_blank");
+              if (!printWindow) {
+                toast("Browser memblokir popup. Izinkan popup untuk mencetak nota.", "error");
+                URL.revokeObjectURL(url);
+                return;
+              }
+
+              // Fallback: if popup blocked or user returns, revoke blob after 60s
+              setTimeout(() => URL.revokeObjectURL(url), 60000);
             }}>
               <span className="inline-flex items-center gap-1.5">
                 <Printer className="h-4 w-4" />
