@@ -33,6 +33,11 @@ export function formatTanggalWaktu(iso: string | null | undefined): string {
 }
 
 /** Calculate whole days between two dates (inclusive of start day). */
+/**
+ * Calculate rental duration in days based on hours (24h = 1 day).
+ * Rounds up to the next day if there are remaining hours.
+ * Supports both date-only ("2026-06-21") and datetime ("2026-06-21T10:00") inputs.
+ */
 export function hitungDurasiHari(
   startDate: string,
   endDate: string
@@ -41,7 +46,9 @@ export function hitungDurasiHari(
   const start = new Date(startDate);
   const end = new Date(endDate);
   const diffMs = end.getTime() - start.getTime();
-  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (diffMs <= 0) return 1; // min 1 day
+  const hours = diffMs / (1000 * 60 * 60);
+  const days = Math.ceil(hours / 24);
   return Math.max(days, 1); // min 1 day rental
 }
 

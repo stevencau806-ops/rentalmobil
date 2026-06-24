@@ -131,7 +131,9 @@ export function BookingClient({
     const car = cars.find((c) => c.id === newForm.car_id);
     if (!car || !newForm.start_date || !newForm.end_date) return null;
     const days = hitungDurasiHari(newForm.start_date, newForm.end_date);
-    return { days, total: days * Number(car.tariff_per_day) };
+    const diffMs = new Date(newForm.end_date).getTime() - new Date(newForm.start_date).getTime();
+    const hours = Math.max(Math.round(diffMs / (1000 * 60 * 60)), 0);
+    return { days, hours, total: days * Number(car.tariff_per_day) };
   }, [cars, newForm]);
 
   const selectedCustomerBlacklisted =
@@ -600,15 +602,15 @@ export function BookingClient({
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input
-              label="Tanggal Sewa"
-              type="date"
+              label="Mulai Sewa"
+              type="datetime-local"
               required
               value={newForm.start_date}
               onChange={(e) => setNewForm({ ...newForm, start_date: e.target.value })}
             />
             <Input
-              label="Tanggal Kembali"
-              type="date"
+              label="Selesai Sewa"
+              type="datetime-local"
               required
               value={newForm.end_date}
               min={newForm.start_date}
@@ -620,7 +622,7 @@ export function BookingClient({
             <div className="rounded-lg bg-brand-50 px-4 py-3">
               <div className="flex justify-between text-sm">
                 <span className="text-brand-700">Durasi</span>
-                <span className="font-medium">{costPreview.days} hari</span>
+                <span className="font-medium">{costPreview.days} hari ({costPreview.hours} jam)</span>
               </div>
               <div className="mt-1 flex justify-between text-sm">
                 <span className="text-brand-700">Total Biaya</span>
