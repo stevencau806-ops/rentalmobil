@@ -21,28 +21,41 @@ export function formatTanggal(iso: string | null | undefined): string {
 }
 
 /** Format an ISO date as dd MMM yyyy, HH:mm in WIB (+07).
- *  Handles both +07:00 and UTC/Z inputs from Supabase.
+ *  Handles date-only, datetime-local, +07:00, and UTC/Z inputs.
  */
 export function formatTanggalWaktu(iso: string | null | undefined): string {
   if (!iso) return "-";
   const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
 
-  // Case 1: stored with +07:00 offset — trust the local time directly
+  // Case 1: bare date only (YYYY-MM-DD) — treat as local midnight
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+    const [y, m, d] = iso.split("-");
+    return `${parseInt(d)} ${months[parseInt(m) - 1]} ${y}, 00.00`;
+  }
+
+  // Case 2: datetime-local without timezone (YYYY-MM-DDTHH:mm) — trust as local time
+  const localMatch = iso.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
+  if (localMatch) {
+    const [, y, m, d, h, min] = localMatch;
+    return `${parseInt(d)} ${months[parseInt(m) - 1]} ${y}, ${h}.${min}`;
+  }
+
+  // Case 3: stored with +07:00 offset — trust the local time directly
   const wibMatch = iso.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
   if (iso.includes("+07:00") && wibMatch) {
     const [, y, m, d, h, min] = wibMatch;
     return `${parseInt(d)} ${months[parseInt(m) - 1]} ${y}, ${h}.${min}`;
   }
 
-  // Case 2: UTC (Z) or other offset — convert to WIB (+7h)
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return "-";
+  // Case 4: UTC (Z) or other offset — convert to WIB (+7h)
+  const dt = new Date(iso);
+  if (isNaN(dt.getTime())) return "-";
 
-  const y = d.getUTCFullYear();
-  const mo = d.getUTCMonth();
-  let day = d.getUTCDate();
-  let h = d.getUTCHours();
-  let min = d.getUTCMinutes();
+  const y = dt.getUTCFullYear();
+  const mo = dt.getUTCMonth();
+  let day = dt.getUTCDate();
+  let h = dt.getUTCHours();
+  let min = dt.getUTCMinutes();
 
   h += 7; // UTC → WIB
   if (h >= 24) {
