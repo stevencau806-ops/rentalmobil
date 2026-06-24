@@ -49,6 +49,7 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [viewKtpUrl, setViewKtpUrl] = useState<string | null>(null);
   const [bookingPrompt, setBookingPrompt] = useState(false);
+  const [newCustomerId, setNewCustomerId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const toast = useToast();
@@ -178,9 +179,10 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
       ktp_url: form.ktp_url.trim() || null,
     };
 
-    const { error } = form.id
-      ? await supabase.from("customers").update(payload).eq("id", form.id)
-      : await supabase.from("customers").insert(payload);
+    let newCustomerId: string | null = null;
+    const { data: insertedData, error } = form.id
+      ? await supabase.from("customers").update(payload).eq("id", form.id).select("id").single()
+      : await supabase.from("customers").insert(payload).select("id").single();
 
     setSaving(false);
     if (error) {
@@ -188,12 +190,17 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
       return;
     }
 
+    if (!form.id && insertedData) {
+      newCustomerId = insertedData.id;
+    }
+
     toast(form.id ? "Pelanggan diperbarui" : "Pelanggan ditambahkan", "success");
     setModalOpen(false);
     await refresh();
 
     // Show booking prompt only for new customers
-    if (!form.id) {
+    if (!form.id && newCustomerId) {
+      setNewCustomerId(newCustomerId);
       setBookingPrompt(true);
     }
   }
@@ -509,7 +516,7 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
             </Button>
             <Button className="flex-1 bg-brand-700 text-white hover:bg-brand-800" onClick={() => {
               setBookingPrompt(false);
-              router.push("/booking");
+              router.push(`/booking?customer=${newCustomerId}`);
             }}>
               Langsung Booking
             </Button>

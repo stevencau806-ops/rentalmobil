@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Trash2, TriangleAlert, Check, Printer, Plus, Eye } from "lucide-react";
 import type { Booking, Car, Customer, AdditionalFine, FineType } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
@@ -70,6 +71,16 @@ export function BookingClient({
     notes: "",
   });
   const [saving, setSaving] = useState(false);
+  const searchParams = useSearchParams();
+
+  // Auto-open booking form with pre-selected customer from query param
+  useEffect(() => {
+    const customerId = searchParams.get("customer");
+    if (customerId && customers.some((c) => c.id === customerId)) {
+      setNewForm((prev) => ({ ...prev, customer_id: customerId }));
+      setNewOpen(true);
+    }
+  }, [searchParams, customers]);
 
   const [returnBooking, setReturnBooking] = useState<Booking | null>(null);
   const [returnForm, setReturnForm] = useState<ReturnForm>({ actual_return_date: "" });
