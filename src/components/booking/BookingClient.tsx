@@ -166,7 +166,8 @@ export function BookingClient({
     const totalCost = days * Number(car.tariff_per_day);
 
     setSaving(true);
-    const { error } = await createClient().from("bookings").insert({
+    const supabase = createClient();
+    const { error } = await supabase.from("bookings").insert({
       car_id: newForm.car_id,
       customer_id: newForm.customer_id,
       start_date: newForm.start_date + ":00+07:00",
@@ -178,6 +179,11 @@ export function BookingClient({
       payment_status: "unpaid",
       notes: newForm.notes.trim() || null,
     });
+
+    if (!error) {
+      // Set car status to rented
+      await supabase.from("cars").update({ status: "rented" }).eq("id", newForm.car_id);
+    }
     setSaving(false);
     if (error) {
       toast(`Gagal: ${error.message}`, "error");
@@ -241,7 +247,8 @@ export function BookingClient({
     const hasFines = fee > 0 || totalAdditionalFines > 0;
 
     setProcessingReturn(true);
-    const { error } = await createClient()
+    const supabase = createClient();
+    const { error } = await supabase
       .from("bookings")
       .update({
         actual_return_date: actualReturn,
@@ -256,6 +263,9 @@ export function BookingClient({
       toast(`Gagal: ${error.message}`, "error");
       return;
     }
+
+    // Set car status back to available
+    await supabase.from("cars").update({ status: "available" }).eq("id", returnBooking.car_id);
 
     if (hasFines) {
       const totalDenda = fee + totalAdditionalFines;
@@ -285,11 +295,18 @@ export function BookingClient({
   async function handleDelete() {
     if (!deleteId) return;
     setDeleting(true);
-    const { error } = await createClient().from("bookings").delete().eq("id", deleteId);
+    const supabase = createClient();
+    // Find the booking to get car_id before deleting
+    const bookingToDelete = bookings.find((b) => b.id === deleteId);
+    const { error } = await supabase.from("bookings").delete().eq("id", deleteId);
     setDeleting(false);
     if (error) {
       toast(`Gagal: ${error.message}`, "error");
       return;
+    }
+    // Set car back to available if booking was active (not yet returned)
+    if (bookingToDelete && !bookingToDelete.actual_return_date) {
+      await supabase.from("cars").update({ status: "available" }).eq("id", bookingToDelete.car_id);
     }
     toast("Booking dihapus", "success");
     setDeleteId(null);
