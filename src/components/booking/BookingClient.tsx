@@ -980,14 +980,36 @@ export function BookingClient({
                 document.body.appendChild(container);
               }
               container.innerHTML = notaEl.outerHTML;
-              document.body.classList.add("printing-nota");
+              document.documentElement.classList.add("printing-nota");
+
+              const cleanup = () => {
+                document.documentElement.classList.remove("printing-nota");
+                if (container) container.innerHTML = "";
+              };
+
+              // Desktop: afterprint event fires when dialog closes
+              window.addEventListener("afterprint", cleanup, { once: true });
+
+              // Mobile fallback: matchMedia print event
+              let mql: MediaQueryList | null = null;
+              const handleMediaChange = (e: MediaQueryListEvent) => {
+                if (!e.matches) {
+                  cleanup();
+                  mql?.removeEventListener("change", handleMediaChange);
+                }
+              };
+              if (window.matchMedia) {
+                mql = window.matchMedia("print");
+                mql.addEventListener("change", handleMediaChange);
+              }
+
+              // Ultimate fallback: cleanup after 15s
+              setTimeout(() => {
+                cleanup();
+                mql?.removeEventListener("change", handleMediaChange);
+              }, 15000);
 
               window.print();
-
-              setTimeout(() => {
-                document.body.classList.remove("printing-nota");
-                if (container) container.innerHTML = "";
-              }, 1000);
             }}>
               <span className="inline-flex items-center gap-1.5">
                 <Printer className="h-4 w-4" />

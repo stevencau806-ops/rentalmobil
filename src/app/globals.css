@@ -56,18 +56,19 @@ body {
   }
 
   /* ===== NOTA PRINT (Booking page) ===== */
-  /* Class added by JS before printing */
-  body.printing-nota > *:not(#print-container) {
+  /* Class added by JS before printing on <html> */
+  html.printing-nota body > *:not(#print-container) {
     display: none !important;
   }
 
-  body.printing-nota #print-container {
+  html.printing-nota #print-container {
     display: block !important;
     position: static !important;
     overflow: visible !important;
     background: white !important;
     margin: 0 !important;
     padding: 0 !important;
+    width: 100% !important;
   }
 
   /* The nota itself */
