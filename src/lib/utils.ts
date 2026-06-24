@@ -23,13 +23,28 @@ export function formatTanggal(iso: string | null | undefined): string {
 /** Format an ISO date as dd MMM yyyy, HH:mm. */
 export function formatTanggalWaktu(iso: string | null | undefined): string {
   if (!iso) return "-";
+  // Handle datetime-local format (2026-06-24T07:00) without timezone conversion
+  // by treating it as local time
+  const d = new Date(iso);
+  // If the string doesn't have timezone info (no Z or +/-), treat as-is
+  if (!iso.includes("Z") && !iso.match(/[+-]\d{2}:\d{2}$/)) {
+    // Parse manually to avoid timezone shift
+    const [datePart, timePart] = iso.split("T");
+    if (datePart && timePart) {
+      const [y, m, day] = datePart.split("-");
+      const [h, min] = timePart.split(":");
+      const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+      return `${parseInt(day)} ${months[parseInt(m) - 1]} ${y}, ${h}.${min}`;
+    }
+  }
   return new Intl.DateTimeFormat("id-ID", {
     day: "2-digit",
     month: "short",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  }).format(new Date(iso));
+    timeZone: "Asia/Jakarta",
+  }).format(d);
 }
 
 /** Calculate whole days between two dates (inclusive of start day). */
