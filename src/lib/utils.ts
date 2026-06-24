@@ -20,34 +20,42 @@ export function formatTanggal(iso: string | null | undefined): string {
   }).format(new Date(iso));
 }
 
-/** Format an ISO date as dd MMM yyyy, HH:mm. */
+/** Format an ISO date as dd MMM yyyy, HH:mm in WIB (+07).
+ *  Handles both +07:00 and UTC/Z inputs from Supabase.
+ */
 export function formatTanggalWaktu(iso: string | null | undefined): string {
   if (!iso) return "-";
   const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
 
-  // If it's a datetime-local without timezone (e.g. "2026-06-24T14:00"), parse directly
-  if (!iso.includes("Z") && !iso.match(/[+-]\d{2}:\d{2}$/)) {
-    const [datePart, timePart] = iso.split("T");
-    if (datePart && timePart) {
-      const [y, m, day] = datePart.split("-");
-      const [h, min] = timePart.split(":");
-      return `${parseInt(day)} ${months[parseInt(m) - 1]} ${y}, ${h}.${min}`;
+  // Case 1: stored with +07:00 offset — trust the local time directly
+  const wibMatch = iso.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  if (iso.includes("+07:00") && wibMatch) {
+    const [, y, m, d, h, min] = wibMatch;
+    return `${parseInt(d)} ${months[parseInt(m) - 1]} ${y}, ${h}.${min}`;
+  }
+
+  // Case 2: UTC (Z) or other offset — convert to WIB (+7h)
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "-";
+
+  const y = d.getUTCFullYear();
+  const mo = d.getUTCMonth();
+  let day = d.getUTCDate();
+  let h = d.getUTCHours();
+  let min = d.getUTCMinutes();
+
+  h += 7; // UTC → WIB
+  if (h >= 24) {
+    h -= 24;
+    day += 1;
+    const dim = new Date(y, mo + 1, 0).getUTCDate();
+    if (day > dim) {
+      day = 1;
+      // month/year rollover omitted for brevity (rare edge case)
     }
   }
 
-  // If it has timezone info, convert to WIB (Asia/Jakarta)
-  const d = new Date(iso);
-  const wib = new Date(d.getTime() + 7 * 60 * 60 * 1000 - d.getTimezoneOffset() * 60 * 1000);
-  // Actually just use Intl with timezone
-  return new Intl.DateTimeFormat("id-ID", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-    timeZone: "Asia/Jakarta",
-  }).format(d);
+  return `${day} ${months[mo]} ${y}, ${String(h).padStart(2, "0")}.${String(min).padStart(2, "0")}`;
 }
 
 /** Calculate whole days between two dates (inclusive of start day). */

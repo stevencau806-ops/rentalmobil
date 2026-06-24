@@ -892,11 +892,11 @@ export function BookingClient({
                 <div className="mt-1 grid grid-cols-2 gap-2 text-xs">
                   <div>
                     <span className="opacity-80">Mulai</span>
-                    <p className="font-bold">{formatTanggal(b.start_date)}</p>
+                    <p className="font-bold">{formatTanggalWaktu(b.start_date)}</p>
                   </div>
                   <div>
                     <span className="opacity-80">Selesai</span>
-                    <p className="font-bold">{formatTanggal(b.end_date)}</p>
+                    <p className="font-bold">{formatTanggalWaktu(b.end_date)}</p>
                   </div>
                   <div>
                     <span className="opacity-80">Durasi</span>
