@@ -23,26 +23,29 @@ export function formatTanggal(iso: string | null | undefined): string {
 /** Format an ISO date as dd MMM yyyy, HH:mm. */
 export function formatTanggalWaktu(iso: string | null | undefined): string {
   if (!iso) return "-";
-  // Handle datetime-local format (2026-06-24T07:00) without timezone conversion
-  // by treating it as local time
-  const d = new Date(iso);
-  // If the string doesn't have timezone info (no Z or +/-), treat as-is
+  const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+
+  // If it's a datetime-local without timezone (e.g. "2026-06-24T14:00"), parse directly
   if (!iso.includes("Z") && !iso.match(/[+-]\d{2}:\d{2}$/)) {
-    // Parse manually to avoid timezone shift
     const [datePart, timePart] = iso.split("T");
     if (datePart && timePart) {
       const [y, m, day] = datePart.split("-");
       const [h, min] = timePart.split(":");
-      const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
       return `${parseInt(day)} ${months[parseInt(m) - 1]} ${y}, ${h}.${min}`;
     }
   }
+
+  // If it has timezone info, convert to WIB (Asia/Jakarta)
+  const d = new Date(iso);
+  const wib = new Date(d.getTime() + 7 * 60 * 60 * 1000 - d.getTimezoneOffset() * 60 * 1000);
+  // Actually just use Intl with timezone
   return new Intl.DateTimeFormat("id-ID", {
-    day: "2-digit",
+    day: "numeric",
     month: "short",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    hour12: false,
     timeZone: "Asia/Jakarta",
   }).format(d);
 }

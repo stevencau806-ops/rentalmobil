@@ -169,8 +169,8 @@ export function BookingClient({
     const { error } = await createClient().from("bookings").insert({
       car_id: newForm.car_id,
       customer_id: newForm.customer_id,
-      start_date: newForm.start_date,
-      end_date: newForm.end_date,
+      start_date: newForm.start_date + ":00+07:00",
+      end_date: newForm.end_date + ":00+07:00",
       duration_days: days,
       total_cost: totalCost,
       late_fee: 0,
