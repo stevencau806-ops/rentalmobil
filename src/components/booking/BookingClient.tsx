@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Trash2, TriangleAlert, Check, Printer, Plus, Eye } from "lucide-react";
 import type { Booking, Car, Customer, AdditionalFine, FineType } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
@@ -70,6 +71,16 @@ export function BookingClient({
     notes: "",
   });
   const [saving, setSaving] = useState(false);
+  const searchParams = useSearchParams();
+
+  // Auto-open booking form with pre-selected customer from query param
+  useEffect(() => {
+    const customerId = searchParams.get("customer");
+    if (customerId && customers.some((c) => c.id === customerId)) {
+      setNewForm((prev) => ({ ...prev, customer_id: customerId }));
+      setNewOpen(true);
+    }
+  }, [searchParams, customers]);
 
   const [returnBooking, setReturnBooking] = useState<Booking | null>(null);
   const [returnForm, setReturnForm] = useState<ReturnForm>({ actual_return_date: "" });
@@ -131,7 +142,9 @@ export function BookingClient({
     const car = cars.find((c) => c.id === newForm.car_id);
     if (!car || !newForm.start_date || !newForm.end_date) return null;
     const days = hitungDurasiHari(newForm.start_date, newForm.end_date);
-    return { days, total: days * Number(car.tariff_per_day) };
+    const diffMs = new Date(newForm.end_date).getTime() - new Date(newForm.start_date).getTime();
+    const hours = Math.max(Math.round(diffMs / (1000 * 60 * 60)), 0);
+    return { days, hours, total: days * Number(car.tariff_per_day) };
   }, [cars, newForm]);
 
   const selectedCustomerBlacklisted =
@@ -153,11 +166,12 @@ export function BookingClient({
     const totalCost = days * Number(car.tariff_per_day);
 
     setSaving(true);
-    const { error } = await createClient().from("bookings").insert({
+    const supabase = createClient();
+    const { error } = await supabase.from("bookings").insert({
       car_id: newForm.car_id,
       customer_id: newForm.customer_id,
-      start_date: newForm.start_date,
-      end_date: newForm.end_date,
+      start_date: newForm.start_date + ":00+07:00",
+      end_date: newForm.end_date + ":00+07:00",
       duration_days: days,
       total_cost: totalCost,
       late_fee: 0,
@@ -165,6 +179,11 @@ export function BookingClient({
       payment_status: "unpaid",
       notes: newForm.notes.trim() || null,
     });
+
+    if (!error) {
+      // Set car status to rented
+      await supabase.from("cars").update({ status: "rented" }).eq("id", newForm.car_id);
+    }
     setSaving(false);
     if (error) {
       toast(`Gagal: ${error.message}`, "error");
@@ -217,9 +236,8 @@ export function BookingClient({
       return;
     }
 
-    // Combine booking end_date (date) as end-of-day for comparison
+    // Deadline is the end_date (datetime) directly - 24h per day from start
     const endDateTime = new Date(returnBooking.end_date);
-    endDateTime.setHours(23, 59, 0, 0);
 
     const { hoursLate, fee } = hitungDenda(actualReturn, endDateTime.toISOString(), finePerHour);
 
@@ -229,7 +247,8 @@ export function BookingClient({
     const hasFines = fee > 0 || totalAdditionalFines > 0;
 
     setProcessingReturn(true);
-    const { error } = await createClient()
+    const supabase = createClient();
+    const { error } = await supabase
       .from("bookings")
       .update({
         actual_return_date: actualReturn,
@@ -244,6 +263,9 @@ export function BookingClient({
       toast(`Gagal: ${error.message}`, "error");
       return;
     }
+
+    // Set car status back to available
+    await supabase.from("cars").update({ status: "available" }).eq("id", returnBooking.car_id);
 
     if (hasFines) {
       const totalDenda = fee + totalAdditionalFines;
@@ -273,11 +295,18 @@ export function BookingClient({
   async function handleDelete() {
     if (!deleteId) return;
     setDeleting(true);
-    const { error } = await createClient().from("bookings").delete().eq("id", deleteId);
+    const supabase = createClient();
+    // Find the booking to get car_id before deleting
+    const bookingToDelete = bookings.find((b) => b.id === deleteId);
+    const { error } = await supabase.from("bookings").delete().eq("id", deleteId);
     setDeleting(false);
     if (error) {
       toast(`Gagal: ${error.message}`, "error");
       return;
+    }
+    // Set car back to available if booking was active (not yet returned)
+    if (bookingToDelete && !bookingToDelete.actual_return_date) {
+      await supabase.from("cars").update({ status: "available" }).eq("id", bookingToDelete.car_id);
     }
     toast("Booking dihapus", "success");
     setDeleteId(null);
@@ -600,15 +629,15 @@ export function BookingClient({
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input
-              label="Tanggal Sewa"
-              type="date"
+              label="Mulai Sewa"
+              type="datetime-local"
               required
               value={newForm.start_date}
               onChange={(e) => setNewForm({ ...newForm, start_date: e.target.value })}
             />
             <Input
-              label="Tanggal Kembali"
-              type="date"
+              label="Selesai Sewa"
+              type="datetime-local"
               required
               value={newForm.end_date}
               min={newForm.start_date}
@@ -620,7 +649,7 @@ export function BookingClient({
             <div className="rounded-lg bg-brand-50 px-4 py-3">
               <div className="flex justify-between text-sm">
                 <span className="text-brand-700">Durasi</span>
-                <span className="font-medium">{costPreview.days} hari</span>
+                <span className="font-medium">{costPreview.days} hari ({costPreview.hours} jam)</span>
               </div>
               <div className="mt-1 flex justify-between text-sm">
                 <span className="text-brand-700">Total Biaya</span>
@@ -681,7 +710,6 @@ export function BookingClient({
 
             {returnForm.actual_return_date && (() => {
               const endDateTime = new Date(returnBooking.end_date);
-              endDateTime.setHours(23, 59, 0, 0);
               const { hoursLate, fee } = hitungDenda(
                 returnForm.actual_return_date,
                 endDateTime.toISOString(),
@@ -864,11 +892,11 @@ export function BookingClient({
                 <div className="mt-1 grid grid-cols-2 gap-2 text-xs">
                   <div>
                     <span className="opacity-80">Mulai</span>
-                    <p className="font-bold">{formatTanggal(b.start_date)}</p>
+                    <p className="font-bold">{formatTanggalWaktu(b.start_date)}</p>
                   </div>
                   <div>
                     <span className="opacity-80">Selesai</span>
-                    <p className="font-bold">{formatTanggal(b.end_date)}</p>
+                    <p className="font-bold">{formatTanggalWaktu(b.end_date)}</p>
                   </div>
                   <div>
                     <span className="opacity-80">Durasi</span>
@@ -944,53 +972,73 @@ export function BookingClient({
               const notaEl = document.getElementById("nota-print-area");
               if (!notaEl) return;
 
-              // Create hidden iframe for printing (works on mobile)
-              const iframe = document.createElement("iframe");
-              iframe.style.position = "fixed";
-              iframe.style.top = "-9999px";
-              iframe.style.left = "-9999px";
-              iframe.style.width = "210mm";
-              iframe.style.height = "297mm";
-              document.body.appendChild(iframe);
+              // Collect inline <style> tags
+              const inlineStyles = Array.from(document.querySelectorAll("style"))
+                .map((el) => el.outerHTML)
+                .join("\n");
 
-              const doc = iframe.contentDocument || iframe.contentWindow?.document;
-              if (!doc) { document.body.removeChild(iframe); return; }
+              // Convert <link rel="stylesheet"> to absolute URLs so they load in blob
+              const linkStyles = Array.from(document.querySelectorAll("link[rel='stylesheet']"))
+                .map((el) => {
+                  const href = (el as HTMLLinkElement).href;
+                  return `<link rel="stylesheet" href="${href}" />`;
+                })
+                .join("\n");
 
-              doc.open();
-              doc.write(`<!DOCTYPE html><html><head><title>Nota Sewa</title><style>
-                body { font-family: system-ui, -apple-system, sans-serif; padding: 8mm; font-size: 13px; line-height: 1.5; color: #0f172a; margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                * { box-sizing: border-box; }
-                .flex { display: flex; } .flex-col { flex-direction: column; } .items-center { align-items: center; } .justify-between { justify-content: space-between; }
-                .grid { display: grid; } .grid-cols-3 { grid-template-columns: repeat(3, 1fr); } .grid-cols-2 { grid-template-columns: repeat(2, 1fr); } .gap-2 { gap: 0.5rem; }
-                .text-center { text-align: center; } .text-right { text-align: right; }
-                .font-bold { font-weight: 700; } .font-semibold { font-weight: 600; } .font-medium { font-weight: 500; }
-                .text-sm { font-size: 13px; } .text-xs { font-size: 11px; } .text-\\[13px\\] { font-size: 13px; } .text-\\[12px\\] { font-size: 12px; } .text-\\[11px\\] { font-size: 11px; } .text-\\[10px\\] { font-size: 10px; } .text-\\[9px\\] { font-size: 10px; }
-                .uppercase { text-transform: uppercase; } .leading-snug { line-height: 1.4; } .leading-tight { line-height: 1.3; }
-                .text-slate-400 { color: #64748b; } .text-slate-500 { color: #475569; } .text-slate-600 { color: #334155; } .text-slate-700 { color: #1e293b; } .text-slate-800 { color: #1e293b; } .text-slate-900 { color: #0f172a; }
-                .text-red-500 { color: #dc2626; } .text-red-600 { color: #b91c1c; } .text-red-700 { color: #b91c1c; } .text-white { color: #fff; }
-                .bg-emerald-500 { background: #10b981; } .bg-amber-500 { background: #f59e0b; } .bg-slate-50 { background: #f8fafc; }
-                .border-b { border-bottom: 1px solid #94a3b8; } .border-t-2 { border-top: 2px solid #0f172a; } .border { border: 1px solid #94a3b8; } .border-slate-200 { border-color: #94a3b8; } .border-slate-300 { border-color: #94a3b8; } .border-slate-400 { border-color: #64748b; } .border-slate-600 { border-color: #475569; } .border-slate-800 { border-color: #0f172a; }
-                .rounded { border-radius: 0.25rem; } .rounded-lg { border-radius: 0.5rem; }
-                .p-1\\.5 { padding: 0.375rem; } .p-2 { padding: 0.5rem; } .p-4 { padding: 1rem; } .px-2 { padding-left: 0.5rem; padding-right: 0.5rem; } .px-6 { padding-left: 1.5rem; padding-right: 1.5rem; } .py-0\\.5 { padding-top: 0.125rem; padding-bottom: 0.125rem; } .py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; } .py-1\\.5 { padding-top: 0.375rem; padding-bottom: 0.375rem; }
-                .pb-2 { padding-bottom: 0.5rem; } .pl-3 { padding-left: 0.75rem; }
-                .mt-1 { margin-top: 0.25rem; } .mt-2 { margin-top: 0.5rem; } .mt-3 { margin-top: 0.75rem; } .mb-0\\.5 { margin-bottom: 0.125rem; } .mb-1 { margin-bottom: 0.25rem; }
-                .w-full { width: 100%; } .w-24 { width: 6rem; } .w-auto { width: auto; } .h-10 { height: 2.5rem; }
-                .inline-block { display: inline-block; } .object-contain { object-fit: contain; }
-                .divide-y > * + * { border-top: 1px solid #cbd5e1; }
-                .space-y-0 > * + * { margin-top: 0; }
-                .list-decimal { list-style-type: decimal; }
-                table { width: 100%; border-collapse: collapse; }
-                .mt-10 { margin-top: 2.5rem; }
-                @page { size: A4; margin: 8mm; }
-              </style></head><body>${notaEl.innerHTML}</body></html>`);
-              doc.close();
+              const html = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                  <meta charset="utf-8" />
+                  <meta name="viewport" content="width=device-width, initial-scale=1" />
+                  <title>Nota Sewa</title>
+                  ${linkStyles}
+                  ${inlineStyles}
+                  <style>
+                    @page { size: 80mm auto; margin: 2mm; }
+                    body { background: white !important; margin: 0 !important; padding: 0 !important; }
+                    #nota-print-area {
+                      width: 72mm !important;
+                      max-width: 72mm !important;
+                      margin: 0 auto !important;
+                      padding: 2mm !important;
+                      background: white !important;
+                      overflow: visible !important;
+                      page-break-inside: avoid !important;
+                    }
+                  </style>
+                </head>
+                <body>
+                  ${notaEl.outerHTML}
+                  <script>
+                    (function() {
+                      function tryPrint() {
+                        if (document.readyState === "complete") {
+                          setTimeout(function() { window.print(); }, 300);
+                        } else {
+                          window.addEventListener("load", function() {
+                            setTimeout(function() { window.print(); }, 300);
+                          });
+                        }
+                      }
+                      tryPrint();
+                    })();
+                  </script>
+                </body>
+                </html>
+              `;
 
-              iframe.onload = () => {
-                setTimeout(() => {
-                  iframe.contentWindow?.print();
-                  setTimeout(() => document.body.removeChild(iframe), 1000);
-                }, 300);
-              };
+              const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+              const url = URL.createObjectURL(blob);
+              const printWindow = window.open(url, "_blank");
+              if (!printWindow) {
+                toast("Browser memblokir popup. Izinkan popup untuk mencetak nota.", "error");
+                URL.revokeObjectURL(url);
+                return;
+              }
+
+              // Fallback: if popup blocked or user returns, revoke blob after 60s
+              setTimeout(() => URL.revokeObjectURL(url), 60000);
             }}>
               <span className="inline-flex items-center gap-1.5">
                 <Printer className="h-4 w-4" />

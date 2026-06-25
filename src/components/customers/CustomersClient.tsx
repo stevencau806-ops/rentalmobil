@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { TriangleAlert, Upload, Camera, Eye, X, Loader2 } from "lucide-react";
 import type { Customer } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
@@ -47,7 +48,10 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
   const [extracting, setExtracting] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [viewKtpUrl, setViewKtpUrl] = useState<string | null>(null);
+  const [bookingPrompt, setBookingPrompt] = useState(false);
+  const [newCustomerId, setNewCustomerId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
   const toast = useToast();
 
   const isBlacklistedNow = blacklistNiks.includes(form.nik.trim());
@@ -175,9 +179,10 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
       ktp_url: form.ktp_url.trim() || null,
     };
 
-    const { error } = form.id
-      ? await supabase.from("customers").update(payload).eq("id", form.id)
-      : await supabase.from("customers").insert(payload);
+    let newCustomerId: string | null = null;
+    const { data: insertedData, error } = form.id
+      ? await supabase.from("customers").update(payload).eq("id", form.id).select("id").single()
+      : await supabase.from("customers").insert(payload).select("id").single();
 
     setSaving(false);
     if (error) {
@@ -185,9 +190,19 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
       return;
     }
 
+    if (!form.id && insertedData) {
+      newCustomerId = insertedData.id;
+    }
+
     toast(form.id ? "Pelanggan diperbarui" : "Pelanggan ditambahkan", "success");
     setModalOpen(false);
     await refresh();
+
+    // Show booking prompt only for new customers
+    if (!form.id && newCustomerId) {
+      setNewCustomerId(newCustomerId);
+      setBookingPrompt(true);
+    }
   }
 
   async function handleDelete() {
@@ -487,6 +502,27 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
         onClose={() => setDeleteId(null)}
         loading={deleting}
       />
+
+      {/* Booking Prompt after saving new customer */}
+      <Modal open={bookingPrompt} onClose={() => setBookingPrompt(false)} title="Pelanggan Tersimpan" size="sm">
+        <div className="text-center space-y-4 py-2">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100">
+            <span className="text-2xl">✅</span>
+          </div>
+          <p className="text-sm text-slate-600">Pelanggan berhasil ditambahkan. Mau langsung buat booking?</p>
+          <div className="flex gap-2">
+            <Button variant="outline" className="flex-1" onClick={() => setBookingPrompt(false)}>
+              Nanti
+            </Button>
+            <Button className="flex-1 bg-brand-700 text-white hover:bg-brand-800" onClick={() => {
+              setBookingPrompt(false);
+              router.push(`/booking?customer=${newCustomerId}`);
+            }}>
+              Langsung Booking
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

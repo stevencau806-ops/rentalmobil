@@ -56,36 +56,41 @@ body {
   }
 
   /* ===== NOTA PRINT (Booking page) ===== */
-  /* Class added by JS before printing */
-  .printing-nota aside,
-  .printing-nota nav,
-  .printing-nota header,
-  .printing-nota .no-print,
-  .printing-nota > *:not(:has(#nota-print-area)) {
+  /* Class added by JS before printing on <html> */
+  html.printing-nota body > *:not(#print-container) {
     display: none !important;
   }
 
-  /* Fallback: hide all direct body children except the modal overlay */
-  .printing-nota [data-radix-portal],
-  .printing-nota [role="dialog"] {
+  html.printing-nota #print-container {
     display: block !important;
     position: static !important;
     overflow: visible !important;
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
   }
 
-  /* The nota itself */
+  /* The nota itself - thermal 80mm style */
   #nota-print-area {
     display: block !important;
     position: static !important;
-    width: 100% !important;
-    max-width: 100% !important;
+    width: 72mm !important;
+    max-width: 72mm !important;
+    margin: 0 auto !important;
     background: white !important;
-    padding: 6mm !important;
-    font-size: 13px !important;
-    line-height: 1.5 !important;
-    color: #0f172a !important;
+    padding: 2mm !important;
+    font-size: 10px !important;
+    line-height: 1.4 !important;
+    color: #000 !important;
     overflow: visible !important;
     page-break-inside: avoid !important;
+  }
+  #nota-print-area * {
+    color: #000 !important;
+  }
+  #nota-print-area .text-gray-400 {
+    color: #666 !important;
   }
   #nota-print-area .h-24 {
     height: 3.5rem !important;
@@ -120,39 +125,8 @@ body {
   #nota-print-area .gap-4 {
     gap: 0.4rem !important;
   }
-  #nota-print-area .text-lg {
-    font-size: 14px !important;
-  }
-  #nota-print-area .text-xs {
-    font-size: 11px !important;
-  }
-  #nota-print-area .text-sm {
-    font-size: 12px !important;
-  }
-  #nota-print-area .text-\[13px\] {
-    font-size: 13px !important;
-  }
-  #nota-print-area .text-\[12px\] {
-    font-size: 12px !important;
-  }
-  #nota-print-area .text-\[11px\] {
-    font-size: 11px !important;
-  }
-  #nota-print-area .text-\[10px\] {
-    font-size: 10px !important;
-  }
-  #nota-print-area table {
-    font-size: 12px !important;
-  }
   #nota-print-area .space-y-1 > * + * {
     margin-top: 0.1rem !important;
-  }
-  /* Make all nota text darker for print readability */
-  #nota-print-area [class*="text-slate-400"] {
-    color: #475569 !important;
-  }
-  #nota-print-area [class*="text-slate-500"] {
-    color: #334155 !important;
   }
 
   /* ===== REPORT PRINT (Laporan page) ===== */
@@ -176,12 +150,13 @@ body {
   }
 
   @page {
-    size: A4;
-    margin: 10mm;
+    size: 80mm auto;
+    margin: 2mm;
   }
 }
 
-.print-only {
+.print-only,
+#print-container {
   display: none;
 }
 
