@@ -70,7 +70,7 @@ export function Nota({ booking, appName = "Erlangga Rental Mobil", phone, notaTe
           <img
             src="https://res.cloudinary.com/dqjh7utdb/image/upload/v1782374668/w8w1oxa6cbrtnoyvugst.png"
             alt={appName}
-            className="h-24 w-auto object-contain"
+            className="w-full h-auto object-contain"
           />
         </div>
         <div className="text-right">
