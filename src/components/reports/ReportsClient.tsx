@@ -37,7 +37,7 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
   const [month, setMonth] = useState(now.getMonth());
   const [year, setYear] = useState(now.getFullYear());
   const [detailBooking, setDetailBooking] = useState<Booking | null>(null);
-  const [selectedCar, setSelectedCar] = useState<{ car: Car; bookings: Booking[] } | null>(null);
+  const [selectedCar, setSelectedCar] = useState<{ car: Car; bookings: Booking[]; showFull?: boolean } | null>(null);
   const [txPage, setTxPage] = useState(1);
   const [adminPage, setAdminPage] = useState(1);
   const ITEMS_PER_PAGE = 5;
@@ -1197,8 +1197,14 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
                     </div>
                   </div>
                   <button
+                    onClick={() => setSelectedCar({ car, bookings: carBookings, showFull: true })}
+                    className="mt-3 w-full rounded-lg bg-white/20 hover:bg-white/30 active:bg-white/40 py-2 text-xs font-semibold text-white transition-colors"
+                  >
+                    Lihat Detail
+                  </button>
+                  <button
                     onClick={() => printCarReport(car)}
-                    className="mt-3 w-full rounded-lg bg-white/20 hover:bg-white/30 active:bg-white/40 py-2 text-xs font-semibold text-white transition-colors inline-flex items-center justify-center gap-1.5"
+                    className="mt-2 w-full rounded-lg bg-white/20 hover:bg-white/30 active:bg-white/40 py-2 text-xs font-semibold text-white transition-colors inline-flex items-center justify-center gap-1.5"
                   >
                     <Printer className="h-3.5 w-3.5" /> Cetak / Download
                   </button>
@@ -1437,86 +1443,122 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
         })()}
       </Modal>
 
-      {/* Car Rental History Modal */}
-      <Modal open={!!selectedCar} onClose={() => setSelectedCar(null)} title="Riwayat Rental Mobil" size="lg">
+      {/* Car Detail Modal - Full Financial Breakdown */}
+      <Modal open={!!selectedCar} onClose={() => setSelectedCar(null)} title={selectedCar?.showFull ? "Detail Laporan Mobil" : "Riwayat Rental Mobil"} size="lg">
         {selectedCar && (() => {
-          const { car, bookings: carBookings } = selectedCar;
+          const { car, bookings: carBookings, showFull } = selectedCar;
+          const carExpensesList = expenses.filter((e) => {
+            const d = new Date(e.date);
+            return e.car_id === car.id && d.getMonth() === month && d.getFullYear() === year;
+          });
+          const carRevenue = carBookings.reduce((s, b) => s + Number(b.total_cost) + Number(b.late_fee || 0), 0);
+          const carExpTotal = carExpensesList.reduce((s, e) => s + Number(e.amount), 0);
+          const commPercent = car.commission_percent ?? 0;
+          const completedBookings = carBookings.filter((b) => b.actual_return_date);
+          const totalCommission = commPercent > 0
+            ? completedBookings.reduce((s, b) => {
+                let total = Number(b.total_cost) + Number(b.late_fee || 0);
+                if (b.additional_fines) { try { total += (JSON.parse(b.additional_fines) as { amount: number }[]).reduce((x, f) => x + (f.amount || 0), 0); } catch {} }
+                return s + Math.round(total * commPercent / 100);
+              }, 0)
+            : 0;
+          const totalDenda = carBookings.reduce((s, b) => s + Number(b.late_fee || 0), 0);
+          const netProfit = carRevenue - carExpTotal - totalCommission;
+
           return (
-            <div className="space-y-3">
-              <div className="rounded-xl bg-slate-100 p-3 text-sm">
-                <p className="font-bold">{car.brand} {car.model}</p>
-                <p className="text-xs text-slate-500">{car.plate}</p>
+            <div className="space-y-3 text-sm">
+              {/* Car identity */}
+              <div className="rounded-xl bg-gradient-to-r from-slate-700 to-slate-800 p-3 text-white">
+                <p className="text-[10px] font-bold uppercase opacity-80">Kendaraan</p>
+                <p className="text-base font-bold">{car.brand} {car.model}</p>
+                <p className="text-xs opacity-90">Plat: {car.plate} · Tarif: {formatRupiah(car.tariff_per_day)}/hari</p>
+                {commPercent > 0 && <p className="text-xs opacity-90 mt-0.5">Admin: {commPercent}% {car.commission_note ? `(${car.commission_note})` : ""}</p>}
               </div>
 
-              {/* Desktop Table */}
-              <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-slate-50 text-xs uppercase text-slate-500">
-                    <tr>
-                      <th className="px-3 py-2">Pelanggan</th>
-                      <th className="px-3 py-2">Tanggal Sewa</th>
-                      <th className="px-3 py-2 text-center">Durasi</th>
-                      <th className="px-3 py-2 text-right">Total</th>
-                      <th className="px-3 py-2">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {carBookings.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="px-3 py-6 text-center text-slate-400">
-                          Tidak ada data rental untuk mobil ini.
-                        </td>
-                      </tr>
-                    ) : (
-                      carBookings.map((b) => (
-                        <tr key={b.id}>
-                          <td className="px-3 py-2 font-medium text-slate-900">
-                            {b.customers?.name}
-                          </td>
-                          <td className="px-3 py-2 text-xs text-slate-500">
-                            {formatTanggal(b.start_date)} → {formatTanggal(b.end_date)}
-                          </td>
-                          <td className="px-3 py-2 text-center text-xs">
-                            {b.duration_days} hari
-                          </td>
-                          <td className="px-3 py-2 text-right font-medium">
-                            {formatRupiah(Number(b.total_cost) + Number(b.late_fee || 0))}
-                          </td>
-                          <td className="px-3 py-2">
-                            <Badge tone={b.payment_status === "paid" ? "green" : "yellow"}>
-                              {paymentStatusLabel[b.payment_status]}
-                            </Badge>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Mobile Card View */}
-              <div className="space-y-2 md:hidden">
-                {carBookings.map((b) => (
-                  <div
-                    key={b.id}
-                    className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm"
-                  >
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold text-slate-900">
-                        {b.customers?.name}
-                      </p>
-                      <Badge tone={b.payment_status === "paid" ? "green" : "yellow"}>
-                        {paymentStatusLabel[b.payment_status]}
-                      </Badge>
+              {showFull && (
+                <>
+                  {/* Summary cards */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3">
+                      <p className="text-[10px] font-bold uppercase text-emerald-700">Pendapatan</p>
+                      <p className="text-lg font-bold text-emerald-800">{formatRupiah(carRevenue)}</p>
+                      <p className="text-[10px] text-emerald-600">{carBookings.length} transaksi</p>
                     </div>
-                    <p className="text-xs text-slate-500 mt-1">
-                      {formatTanggal(b.start_date)} → {formatTanggal(b.end_date)} · {b.duration_days} hari
-                    </p>
-                    <p className="text-sm font-bold text-slate-900 mt-1">
-                      {formatRupiah(Number(b.total_cost) + Number(b.late_fee || 0))}
-                    </p>
+                    <div className="rounded-xl bg-red-50 border border-red-200 p-3">
+                      <p className="text-[10px] font-bold uppercase text-red-700">Pengeluaran</p>
+                      <p className="text-lg font-bold text-red-800">{formatRupiah(carExpTotal)}</p>
+                      <p className="text-[10px] text-red-600">{carExpensesList.length} transaksi</p>
+                    </div>
+                    {commPercent > 0 && (
+                      <div className="rounded-xl bg-violet-50 border border-violet-200 p-3">
+                        <p className="text-[10px] font-bold uppercase text-violet-700">Potongan Admin {commPercent}%</p>
+                        <p className="text-lg font-bold text-violet-800">{formatRupiah(totalCommission)}</p>
+                        <p className="text-[10px] text-violet-600">{completedBookings.length} booking</p>
+                      </div>
+                    )}
+                    {totalDenda > 0 && (
+                      <div className="rounded-xl bg-amber-50 border border-amber-200 p-3">
+                        <p className="text-[10px] font-bold uppercase text-amber-700">Total Denda</p>
+                        <p className="text-lg font-bold text-amber-800">{formatRupiah(totalDenda)}</p>
+                        <p className="text-[10px] text-amber-600">Termasuk di pendapatan</p>
+                      </div>
+                    )}
+                    <div className={`rounded-xl ${netProfit >= 0 ? "bg-blue-50 border-blue-200" : "bg-red-50 border-red-200"} border p-3 col-span-2`}>
+                      <p className={`text-[10px] font-bold uppercase ${netProfit >= 0 ? "text-blue-700" : "text-red-700"}`}>Laba Bersih</p>
+                      <p className={`text-xl font-bold ${netProfit >= 0 ? "text-blue-800" : "text-red-800"}`}>{formatRupiah(netProfit)}</p>
+                      <p className="text-[10px] text-slate-500">Pendapatan - Pengeluaran{commPercent > 0 ? " - Admin" : ""}</p>
+                    </div>
                   </div>
-                ))}
+
+                  {/* Pengeluaran list */}
+                  {carExpensesList.length > 0 && (
+                    <div>
+                      <p className="text-xs font-bold uppercase text-slate-600 mb-2">Rincian Pengeluaran</p>
+                      <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                        {carExpensesList.map((e) => (
+                          <div key={e.id} className="flex items-center justify-between rounded-lg bg-red-50 px-3 py-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm">{expenseTypeIcon[e.type]}</span>
+                              <div>
+                                <p className="text-xs font-medium text-slate-800">{expenseTypeLabel[e.type]}</p>
+                                <p className="text-[10px] text-slate-500">{formatTanggal(e.date)} {e.description ? `· ${e.description}` : ""}</p>
+                              </div>
+                            </div>
+                            <p className="text-xs font-bold text-red-700">{formatRupiah(Number(e.amount))}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Booking list */}
+              <div>
+                <p className="text-xs font-bold uppercase text-slate-600 mb-2">Riwayat Sewa</p>
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {carBookings.length === 0 ? (
+                    <p className="text-center text-xs text-slate-400 py-4">Tidak ada data rental periode ini.</p>
+                  ) : (
+                    carBookings.map((b) => (
+                      <div key={b.id} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-semibold text-slate-900">{b.customers?.name}</p>
+                          <Badge tone={b.payment_status === "paid" ? "green" : "yellow"}>
+                            {paymentStatusLabel[b.payment_status]}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-1">
+                          {formatTanggal(b.start_date)} → {formatTanggal(b.end_date)} · {b.duration_days} hari
+                        </p>
+                        <div className="flex items-center justify-between mt-1">
+                          <p className="text-sm font-bold text-slate-900">{formatRupiah(Number(b.total_cost) + Number(b.late_fee || 0))}</p>
+                          {Number(b.late_fee || 0) > 0 && <span className="text-[10px] text-red-600 font-medium">Denda: {formatRupiah(Number(b.late_fee))}</span>}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
 
               <button
