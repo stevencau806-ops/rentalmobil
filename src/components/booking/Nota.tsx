@@ -64,26 +64,36 @@ export function Nota({ booking, appName = "Erlangga Rental Mobil", phone, notaTe
   return (
     <div className="bg-white p-4 text-slate-900 text-[13px] leading-snug" id="nota-print-area">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-400 pb-2">
-        <div>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="https://res.cloudinary.com/dqjh7utdb/image/upload/v1782374668/w8w1oxa6cbrtnoyvugst.png"
-            alt={appName}
-            className="w-full h-auto object-contain"
-          />
-        </div>
-        <div className="text-right">
-          <span
-            className={`inline-block rounded px-2 py-0.5 text-[11px] font-bold uppercase ${
-              booking.payment_status === "paid"
-                ? "bg-emerald-500 text-white"
-                : "bg-amber-500 text-white"
-            }`}
-          >
-            {booking.payment_status === "paid" ? "LUNAS" : "BELUM BAYAR"}
-          </span>
-          <p className="mt-1 text-[11px] text-slate-600">#{booking.id.slice(0, 8).toUpperCase()}</p>
+      <div className="border-b border-slate-300 pb-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="https://res.cloudinary.com/dqjh7utdb/image/upload/v1782374668/w8w1oxa6cbrtnoyvugst.png"
+              alt={appName}
+              className="h-20 w-auto object-contain"
+            />
+            <div className="border-l-2 border-slate-300 pl-4">
+              <h1 className="text-lg font-bold text-slate-900">{appName}</h1>
+              {phone && (
+                <p className="mt-0.5 text-[12px] text-slate-700">📞 {phone}</p>
+              )}
+              <div className="mt-1 h-0.5 w-12 bg-slate-800 rounded" />
+              <p className="mt-1 text-[10px] text-slate-500 italic">Sewa mobil mudah, aman & terpercaya</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <span
+              className={`inline-block rounded px-2 py-0.5 text-[11px] font-bold uppercase ${
+                booking.payment_status === "paid"
+                  ? "bg-emerald-500 text-white"
+                  : "bg-amber-500 text-white"
+              }`}
+            >
+              {booking.payment_status === "paid" ? "LUNAS" : "BELUM BAYAR"}
+            </span>
+            <p className="mt-1 text-[11px] text-slate-600">#{booking.id.slice(0, 8).toUpperCase()}</p>
+          </div>
         </div>
       </div>
 
