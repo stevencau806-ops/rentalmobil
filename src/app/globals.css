@@ -81,57 +81,47 @@ body {
     background: white !important;
     padding: 2mm !important;
     font-size: 10px !important;
-    line-height: 1.3 !important;
+    line-height: 1.4 !important;
     color: #000 !important;
     overflow: visible !important;
     page-break-inside: avoid !important;
+    /* Prevent text doubling on thermal */
+    -webkit-font-smoothing: none !important;
+    -moz-osx-font-smoothing: unset !important;
+    text-shadow: none !important;
+    letter-spacing: 0 !important;
   }
   #nota-print-area * {
     color: #000 !important;
+    text-shadow: none !important;
+    -webkit-font-smoothing: none !important;
+  }
+  /* Cap font weight to 600 for thermal */
+  #nota-print-area .font-bold,
+  #nota-print-area .font-black,
+  #nota-print-area .font-extrabold {
+    font-weight: 600 !important;
+  }
+  #nota-print-area .font-semibold {
+    font-weight: 600 !important;
   }
   #nota-print-area img {
     width: auto !important;
-    max-height: 4rem !important;
+    max-height: 3.5rem !important;
     height: auto !important;
   }
-  #nota-print-area .text-gray-400 {
-    color: #666 !important;
+  /* Consistent section spacing */
+  #nota-print-area .nota-section {
+    margin-bottom: 2mm !important;
   }
-  #nota-print-area .h-24 {
-    height: 3.5rem !important;
+  /* Dashed divider between sections */
+  #nota-print-area .nota-divider {
+    border-bottom: 1px dashed #000 !important;
+    margin: 2mm 0 !important;
   }
-  #nota-print-area .pb-4 {
-    padding-bottom: 0.4rem !important;
-  }
-  #nota-print-area .mt-4 {
-    margin-top: 0.4rem !important;
-  }
-  #nota-print-area .mt-5 {
-    margin-top: 0.5rem !important;
-  }
-  #nota-print-area .mt-6 {
-    margin-top: 0.6rem !important;
-  }
-  #nota-print-area .mt-8 {
-    margin-top: 1rem !important;
-  }
-  #nota-print-area .mt-16 {
-    margin-top: 2rem !important;
-  }
-  #nota-print-area .p-6 {
-    padding: 0 !important;
-  }
-  #nota-print-area .p-4 {
-    padding: 0.3rem !important;
-  }
-  #nota-print-area .p-3 {
-    padding: 0.25rem !important;
-  }
-  #nota-print-area .gap-4 {
-    gap: 0.4rem !important;
-  }
-  #nota-print-area .space-y-1 > * + * {
-    margin-top: 0.1rem !important;
+  /* Ketentuan list - more readable line height */
+  #nota-print-area .nota-terms {
+    line-height: 1.5 !important;
   }
 
   /* ===== REPORT PRINT (Laporan page) ===== */
@@ -163,6 +153,18 @@ body {
 .print-only,
 #print-container {
   display: none;
+}
+
+/* Nota receipt styles (visible in modal too) */
+.nota-receipt .nota-section {
+  margin-bottom: 6px;
+}
+.nota-receipt .nota-divider {
+  border-bottom: 1px dashed #ccc;
+  margin: 6px 0;
+}
+.nota-receipt .nota-terms {
+  line-height: 1.5;
 }
 
 @keyframes slide-up {
