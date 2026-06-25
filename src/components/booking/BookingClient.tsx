@@ -995,16 +995,17 @@ export function BookingClient({
                   ${linkStyles}
                   ${inlineStyles}
                   <style>
-                    @page { size: 80mm auto; margin: 2mm; }
+                    @page { size: A4; margin: 10mm; }
                     body { background: white !important; margin: 0 !important; padding: 0 !important; }
                     #nota-print-area {
-                      width: 72mm !important;
-                      max-width: 72mm !important;
+                      width: 100% !important;
+                      max-width: 100% !important;
                       margin: 0 auto !important;
-                      padding: 2mm !important;
+                      padding: 6mm !important;
                       background: white !important;
                       overflow: visible !important;
                       page-break-inside: avoid !important;
+                      color: #0f172a !important;
                     }
                   </style>
                 </head>

@@ -71,26 +71,31 @@ body {
     width: 100% !important;
   }
 
-  /* The nota itself - thermal 80mm style */
+  /* The nota itself - A4 modern layout */
   #nota-print-area {
     display: block !important;
     position: static !important;
-    width: 72mm !important;
-    max-width: 72mm !important;
+    width: 100% !important;
+    max-width: 100% !important;
     margin: 0 auto !important;
     background: white !important;
-    padding: 2mm !important;
-    font-size: 10px !important;
-    line-height: 1.4 !important;
-    color: #000 !important;
+    padding: 6mm !important;
+    font-size: 13px !important;
+    line-height: 1.5 !important;
+    color: #0f172a !important;
     overflow: visible !important;
     page-break-inside: avoid !important;
   }
   #nota-print-area * {
-    color: #000 !important;
+    color: #0f172a !important;
   }
-  #nota-print-area .text-gray-400 {
-    color: #666 !important;
+  #nota-print-area .text-slate-600,
+  #nota-print-area .text-slate-700 {
+    color: #334155 !important;
+  }
+  #nota-print-area .text-red-700,
+  #nota-print-area .text-red-600 {
+    color: #b91c1c !important;
   }
   #nota-print-area .h-24 {
     height: 3.5rem !important;
@@ -150,8 +155,8 @@ body {
   }
 
   @page {
-    size: 80mm auto;
-    margin: 2mm;
+    size: A4;
+    margin: 10mm;
   }
 }
 
