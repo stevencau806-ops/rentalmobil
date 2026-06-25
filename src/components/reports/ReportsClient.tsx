@@ -397,29 +397,34 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
           Laporan dicetak: ${formatTanggalWaktu(new Date().toISOString())} &nbsp;|&nbsp; Erlangga Rental Mobil
         </p>
       </div>
+      <script>
+        (function() {
+          function tryPrint() {
+            if (document.readyState === "complete") {
+              setTimeout(function() { window.print(); }, 400);
+            } else {
+              window.addEventListener("load", function() {
+                setTimeout(function() { window.print(); }, 400);
+              });
+            }
+          }
+          tryPrint();
+        })();
+      </script>
     </body></html>`;
 
-    const iframe = document.createElement("iframe");
-    iframe.style.position = "fixed";
-    iframe.style.top = "-9999px";
-    iframe.style.left = "-9999px";
-    iframe.style.width = "210mm";
-    iframe.style.height = "297mm";
-    document.body.appendChild(iframe);
-
-    const doc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (!doc) { document.body.removeChild(iframe); return; }
-
-    doc.open();
-    doc.write(html);
-    doc.close();
-
-    iframe.onload = () => {
-      setTimeout(() => {
-        iframe.contentWindow?.print();
-        setTimeout(() => document.body.removeChild(iframe), 1000);
-      }, 300);
-    };
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const printWindow = window.open(url, "_blank");
+    if (!printWindow) {
+      // Fallback: open via anchor if popup blocked
+      const a = document.createElement("a");
+      a.href = url;
+      a.target = "_blank";
+      a.click();
+    }
+    // Revoke blob after 60s
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
   }
 
   const tabs: { key: Tab; label: string; icon: string }[] = [
