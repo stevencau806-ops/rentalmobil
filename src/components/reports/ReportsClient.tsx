@@ -38,6 +38,9 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
   const [year, setYear] = useState(now.getFullYear());
   const [detailBooking, setDetailBooking] = useState<Booking | null>(null);
   const [selectedCar, setSelectedCar] = useState<{ car: Car; bookings: Booking[] } | null>(null);
+  const [txPage, setTxPage] = useState(1);
+  const [adminPage, setAdminPage] = useState(1);
+  const ITEMS_PER_PAGE = 5;
 
   const years = useMemo(() => {
     const set = new Set<number>([now.getFullYear()]);
@@ -435,7 +438,7 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
         <Select
           label="Tahun"
           value={year}
-          onChange={(e) => setYear(Number(e.target.value))}
+          onChange={(e) => { setYear(Number(e.target.value)); setTxPage(1); setAdminPage(1); }}
           className="w-32"
         >
           {years.map((y) => (
@@ -448,7 +451,7 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
           <Select
             label="Bulan"
             value={month}
-            onChange={(e) => setMonth(Number(e.target.value))}
+            onChange={(e) => { setMonth(Number(e.target.value)); setTxPage(1); setAdminPage(1); }}
             className="w-40"
           >
             {namaBulan.map((m, i) => (
@@ -593,35 +596,59 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
                   <p className="text-xs text-slate-400 mt-1">Transaksi akan muncul setelah ada booking yang selesai</p>
                 </div>
               ) : (
-                monthBookings.map((b) => {
-                  const totalWithFine = Number(b.total_cost) + Number(b.late_fee || 0);
-                  return (
-                    <div key={b.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <p className="text-sm font-semibold text-slate-900">{b.customers?.name}</p>
-                          <p className="text-xs text-slate-500">{b.cars?.brand} {b.cars?.model} · {b.cars?.plate}</p>
+                <>
+                  {monthBookings.slice((txPage - 1) * ITEMS_PER_PAGE, txPage * ITEMS_PER_PAGE).map((b) => {
+                    const totalWithFine = Number(b.total_cost) + Number(b.late_fee || 0);
+                    return (
+                      <div key={b.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="text-sm font-semibold text-slate-900">{b.customers?.name}</p>
+                            <p className="text-xs text-slate-500">{b.cars?.brand} {b.cars?.model} · {b.cars?.plate}</p>
+                          </div>
+                          <Badge tone={b.payment_status === "paid" ? "green" : "yellow"}>
+                            {paymentStatusLabel[b.payment_status]}
+                          </Badge>
                         </div>
-                        <Badge tone={b.payment_status === "paid" ? "green" : "yellow"}>
-                          {paymentStatusLabel[b.payment_status]}
-                        </Badge>
-                      </div>
-                      <div className="mt-2 flex items-center justify-between text-xs">
-                        <div className="text-slate-400">
-                          <p>{formatTanggal(b.start_date)} → {formatTanggal(b.end_date)}</p>
-                          <p>{b.duration_days} hari</p>
+                        <div className="mt-2 flex items-center justify-between text-xs">
+                          <div className="text-slate-400">
+                            <p>{formatTanggal(b.start_date)} → {formatTanggal(b.end_date)}</p>
+                            <p>{b.duration_days} hari</p>
+                          </div>
+                          <span className="text-base font-bold text-slate-900">{formatRupiah(totalWithFine)}</span>
                         </div>
-                        <span className="text-base font-bold text-slate-900">{formatRupiah(totalWithFine)}</span>
+                        <button
+                          onClick={() => setDetailBooking(b)}
+                          className="mt-2 w-full rounded-lg bg-blue-600 py-2 text-xs font-semibold text-white hover:bg-blue-700 active:bg-blue-800 transition-colors"
+                        >
+                          Lihat Detail
+                        </button>
                       </div>
-                      <button
-                        onClick={() => setDetailBooking(b)}
-                        className="mt-2 w-full rounded-lg bg-blue-600 py-2 text-xs font-semibold text-white hover:bg-blue-700 active:bg-blue-800 transition-colors"
-                      >
-                        Lihat Detail
-                      </button>
+                    );
+                  })}
+                  {/* Pagination */}
+                  {monthBookings.length > ITEMS_PER_PAGE && (
+                    <div className="flex items-center justify-between pt-2">
+                      <p className="text-xs text-slate-400">{txPage}/{Math.ceil(monthBookings.length / ITEMS_PER_PAGE)} halaman</p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setTxPage((p) => Math.max(1, p - 1))}
+                          disabled={txPage === 1}
+                          className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 disabled:opacity-40"
+                        >
+                          ← Prev
+                        </button>
+                        <button
+                          onClick={() => setTxPage((p) => Math.min(Math.ceil(monthBookings.length / ITEMS_PER_PAGE), p + 1))}
+                          disabled={txPage >= Math.ceil(monthBookings.length / ITEMS_PER_PAGE)}
+                          className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 disabled:opacity-40"
+                        >
+                          Next →
+                        </button>
+                      </div>
                     </div>
-                  );
-                })
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -700,27 +727,57 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
               <div className="md:hidden">
                 <p className="mb-2 text-xs font-semibold uppercase text-violet-600">Rincian Admin %</p>
                 <div className="space-y-2">
-                  {commissionData.monthCommissions.map((item) => (
-                    <div key={item.booking.id} className="rounded-xl border border-violet-200 bg-gradient-to-r from-violet-50 to-purple-50 px-4 py-3 shadow-sm">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-semibold text-slate-900">{item.booking.customers?.name}</p>
-                          <p className="text-xs text-slate-500">{item.car?.brand} {item.car?.model} · {item.car?.plate}</p>
-                          {item.car?.commission_note && <p className="text-xs text-violet-600 mt-0.5">📝 {item.car.commission_note}</p>}
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-bold text-violet-700">{formatRupiah(item.commissionAmount)}</p>
-                          <span className="inline-block rounded-full bg-violet-500 px-2 py-0.5 text-[10px] font-bold text-white">{item.percent}%</span>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => setDetailBooking(item.booking)}
-                        className="mt-2 w-full rounded-lg bg-violet-600 py-2 text-xs font-semibold text-white hover:bg-violet-700 active:bg-violet-800 transition-colors"
-                      >
-                        Lihat Detail
-                      </button>
+                  {commissionData.monthCommissions.length === 0 ? (
+                    <div className="rounded-xl border border-slate-200 px-4 py-8 text-center text-slate-400">
+                      Tidak ada komisi pada bulan ini.
                     </div>
-                  ))}
+                  ) : (
+                    <>
+                      {commissionData.monthCommissions.slice((adminPage - 1) * ITEMS_PER_PAGE, adminPage * ITEMS_PER_PAGE).map((item) => (
+                        <div key={item.booking.id} className="rounded-xl border border-violet-200 bg-gradient-to-r from-violet-50 to-purple-50 px-4 py-3 shadow-sm">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-semibold text-slate-900">{item.booking.customers?.name}</p>
+                              <p className="text-xs text-slate-500">{item.car?.brand} {item.car?.model} · {item.car?.plate}</p>
+                              {item.car?.commission_note && <p className="text-xs text-violet-600 mt-0.5">📝 {item.car.commission_note}</p>}
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm font-bold text-violet-700">{formatRupiah(item.commissionAmount)}</p>
+                              <span className="inline-block rounded-full bg-violet-500 px-2 py-0.5 text-[10px] font-bold text-white">{item.percent}%</span>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => setDetailBooking(item.booking)}
+                            className="mt-2 w-full rounded-lg bg-violet-600 py-2 text-xs font-semibold text-white hover:bg-violet-700 active:bg-violet-800 transition-colors"
+                          >
+                            Lihat Detail
+                          </button>
+                        </div>
+                      ))}
+                      {/* Pagination */}
+                      {commissionData.monthCommissions.length > ITEMS_PER_PAGE && (
+                        <div className="flex items-center justify-between pt-2">
+                          <p className="text-xs text-slate-400">{adminPage}/{Math.ceil(commissionData.monthCommissions.length / ITEMS_PER_PAGE)} halaman</p>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setAdminPage((p) => Math.max(1, p - 1))}
+                              disabled={adminPage === 1}
+                              className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 disabled:opacity-40"
+                            >
+                              ← Prev
+                            </button>
+                            <button
+                              onClick={() => setAdminPage((p) => Math.min(Math.ceil(commissionData.monthCommissions.length / ITEMS_PER_PAGE), p + 1))}
+                              disabled={adminPage >= Math.ceil(commissionData.monthCommissions.length / ITEMS_PER_PAGE)}
+                              className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 disabled:opacity-40"
+                            >
+                              Next →
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
 
