@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Printer } from "lucide-react";
 import type { Booking, Expense, ExpenseType, Car, AdditionalFine } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody } from "@/components/ui/Card";
@@ -23,7 +24,7 @@ interface ReportsClientProps {
   cars: Car[];
 }
 
-type Tab = "monthly" | "yearly" | "commission" | "expense" | "history";
+type Tab = "monthly" | "yearly" | "car" | "commission" | "expense" | "history";
 
 const namaBulan = [
   "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -177,9 +178,169 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
   const monthNetProfit = monthRevenue - monthExpenses - commissionData.monthTotal;
   const yearNetProfit = yearRevenue - yearExpenses - commissionData.yearTotal;
 
+  // ---- Print per-car report in nota style ----
+  function printCarReport(car: Car) {
+    const carBookings = bookings.filter((b) => {
+      const d = new Date(b.start_date);
+      return b.car_id === car.id && d.getMonth() === month && d.getFullYear() === year;
+    });
+    const carExpensesList = expenses.filter((e) => {
+      const d = new Date(e.date);
+      return e.car_id === car.id && d.getMonth() === month && d.getFullYear() === year;
+    });
+    const carRevenue = carBookings.reduce((s, b) => s + Number(b.total_cost) + Number(b.late_fee || 0), 0);
+    const carExpensesTotal = carExpensesList.reduce((s, e) => s + Number(e.amount), 0);
+    const carProfit = carRevenue - carExpensesTotal;
+
+    const bookingRows = carBookings.map((b) => {
+      const total = Number(b.total_cost) + Number(b.late_fee || 0);
+      return `<tr>
+        <td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;font-size:12px;">${formatTanggal(b.start_date)}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;font-size:12px;">${b.customers?.name ?? "-"}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;font-size:12px;text-align:center;">${b.duration_days} hari</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;font-size:12px;text-align:right;font-weight:600;">${formatRupiah(total)}</td>
+      </tr>`;
+    }).join("");
+
+    const expenseRows = carExpensesList.map((e) => {
+      return `<tr>
+        <td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;font-size:12px;">${formatTanggal(e.date)}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;font-size:12px;">${expenseTypeIcon[e.type]} ${expenseTypeLabel[e.type]}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;font-size:12px;">${e.description || "-"}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;font-size:12px;text-align:right;font-weight:600;color:#dc2626;">${formatRupiah(Number(e.amount))}</td>
+      </tr>`;
+    }).join("");
+
+    const html = `<!DOCTYPE html><html><head><title>Laporan ${car.brand} ${car.model} - ${namaBulan[month]} ${year}</title>
+    <style>
+      body { font-family: system-ui, -apple-system, sans-serif; padding: 8mm; font-size: 13px; line-height: 1.5; color: #0f172a; margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      * { box-sizing: border-box; }
+      table { width: 100%; border-collapse: collapse; }
+      @page { size: A4; margin: 10mm; }
+    </style></head><body>
+      <div style="border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <h1 style="margin:0;font-size:18px;font-weight:700;">Laporan Keuangan Mobil</h1>
+            <p style="margin:4px 0 0;font-size:12px;color:#475569;">Erlangga Rental Mobil</p>
+          </div>
+          <div style="text-align:right;">
+            <p style="margin:0;font-size:11px;color:#64748b;">Periode</p>
+            <p style="margin:2px 0 0;font-size:14px;font-weight:700;">${namaBulan[month]} ${year}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Identitas Mobil -->
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:16px;">
+        <p style="margin:0;font-size:10px;font-weight:700;text-transform:uppercase;color:#64748b;">Identitas Kendaraan</p>
+        <p style="margin:4px 0 0;font-size:16px;font-weight:700;">${car.brand} ${car.model}</p>
+        <p style="margin:2px 0 0;font-size:12px;color:#334155;">Plat: ${car.plate} &nbsp;|&nbsp; Tahun: ${car.year ?? "-"} &nbsp;|&nbsp; Tarif: ${formatRupiah(car.tariff_per_day)}/hari</p>
+      </div>
+
+      <!-- Ringkasan -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
+        <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:12px;">
+          <p style="margin:0;font-size:10px;font-weight:700;text-transform:uppercase;color:#047857;">Pendapatan</p>
+          <p style="margin:4px 0 0;font-size:16px;font-weight:700;color:#065f46;">${formatRupiah(carRevenue)}</p>
+          <p style="margin:2px 0 0;font-size:10px;color:#047857;">${carBookings.length} transaksi</p>
+        </div>
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px;">
+          <p style="margin:0;font-size:10px;font-weight:700;text-transform:uppercase;color:#b91c1c;">Pengeluaran</p>
+          <p style="margin:4px 0 0;font-size:16px;font-weight:700;color:#991b1b;">${formatRupiah(carExpensesTotal)}</p>
+          <p style="margin:2px 0 0;font-size:10px;color:#b91c1c;">${carExpensesList.length} transaksi</p>
+        </div>
+        <div style="background:${carProfit >= 0 ? "#eff6ff" : "#fef2f2"};border:1px solid ${carProfit >= 0 ? "#bfdbfe" : "#fecaca"};border-radius:8px;padding:12px;">
+          <p style="margin:0;font-size:10px;font-weight:700;text-transform:uppercase;color:${carProfit >= 0 ? "#1d4ed8" : "#b91c1c"};">${carProfit >= 0 ? "Laba" : "Rugi"}</p>
+          <p style="margin:4px 0 0;font-size:16px;font-weight:700;color:${carProfit >= 0 ? "#1e40af" : "#991b1b"};">${formatRupiah(carProfit)}</p>
+        </div>
+      </div>
+
+      <!-- Detail Pendapatan -->
+      <div style="margin-bottom:16px;">
+        <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;color:#334155;">Detail Pendapatan (Sewa)</p>
+        ${carBookings.length === 0
+          ? '<p style="font-size:12px;color:#94a3b8;text-align:center;padding:16px 0;">Tidak ada transaksi sewa periode ini.</p>'
+          : `<table>
+            <thead>
+              <tr style="background:#f8fafc;">
+                <th style="padding:6px 8px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:#64748b;border-bottom:2px solid #e2e8f0;">Tanggal</th>
+                <th style="padding:6px 8px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:#64748b;border-bottom:2px solid #e2e8f0;">Pelanggan</th>
+                <th style="padding:6px 8px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;color:#64748b;border-bottom:2px solid #e2e8f0;">Durasi</th>
+                <th style="padding:6px 8px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;color:#64748b;border-bottom:2px solid #e2e8f0;">Total</th>
+              </tr>
+            </thead>
+            <tbody>${bookingRows}</tbody>
+            <tfoot>
+              <tr style="border-top:2px solid #0f172a;">
+                <td colspan="3" style="padding:8px;text-align:right;font-weight:700;font-size:12px;">TOTAL PENDAPATAN</td>
+                <td style="padding:8px;text-align:right;font-weight:700;font-size:14px;color:#065f46;">${formatRupiah(carRevenue)}</td>
+              </tr>
+            </tfoot>
+          </table>`
+        }
+      </div>
+
+      <!-- Detail Pengeluaran -->
+      <div style="margin-bottom:16px;">
+        <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;color:#334155;">Detail Pengeluaran</p>
+        ${carExpensesList.length === 0
+          ? '<p style="font-size:12px;color:#94a3b8;text-align:center;padding:16px 0;">Tidak ada pengeluaran periode ini.</p>'
+          : `<table>
+            <thead>
+              <tr style="background:#fef2f2;">
+                <th style="padding:6px 8px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:#b91c1c;border-bottom:2px solid #fecaca;">Tanggal</th>
+                <th style="padding:6px 8px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:#b91c1c;border-bottom:2px solid #fecaca;">Kategori</th>
+                <th style="padding:6px 8px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:#b91c1c;border-bottom:2px solid #fecaca;">Keterangan</th>
+                <th style="padding:6px 8px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;color:#b91c1c;border-bottom:2px solid #fecaca;">Jumlah</th>
+              </tr>
+            </thead>
+            <tbody>${expenseRows}</tbody>
+            <tfoot>
+              <tr style="border-top:2px solid #991b1b;">
+                <td colspan="3" style="padding:8px;text-align:right;font-weight:700;font-size:12px;color:#991b1b;">TOTAL PENGELUARAN</td>
+                <td style="padding:8px;text-align:right;font-weight:700;font-size:14px;color:#991b1b;">${formatRupiah(carExpensesTotal)}</td>
+              </tr>
+            </tfoot>
+          </table>`
+        }
+      </div>
+
+      <!-- Footer -->
+      <div style="border-top:1px solid #e2e8f0;padding-top:12px;margin-top:20px;">
+        <p style="margin:0;font-size:10px;color:#64748b;text-align:center;">
+          Laporan dicetak: ${formatTanggalWaktu(new Date().toISOString())} &nbsp;|&nbsp; Erlangga Rental Mobil
+        </p>
+      </div>
+    </body></html>`;
+
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.top = "-9999px";
+    iframe.style.left = "-9999px";
+    iframe.style.width = "210mm";
+    iframe.style.height = "297mm";
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!doc) { document.body.removeChild(iframe); return; }
+
+    doc.open();
+    doc.write(html);
+    doc.close();
+
+    iframe.onload = () => {
+      setTimeout(() => {
+        iframe.contentWindow?.print();
+        setTimeout(() => document.body.removeChild(iframe), 1000);
+      }, 300);
+    };
+  }
+
   const tabs: { key: Tab; label: string; icon: string }[] = [
     { key: "monthly", label: "Bulanan", icon: "📅" },
     { key: "yearly", label: "Tahunan", icon: "📊" },
+    { key: "car", label: "Per Mobil", icon: "🚗" },
     { key: "commission", label: "Admin %", icon: "💰" },
     { key: "expense", label: "Pengeluaran", icon: "💸" },
     { key: "history", label: "Riwayat", icon: "📜" },
@@ -201,7 +362,7 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
             </option>
           ))}
         </Select>
-        {(tab === "monthly" || tab === "expense" || tab === "commission") && (
+        {(tab === "monthly" || tab === "expense" || tab === "commission" || tab === "car") && (
           <Select
             label="Bulan"
             value={month}
@@ -697,6 +858,75 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
                 </div>
               </CardBody>
             </Card>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Per Mobil ===== */}
+      {tab === "car" && (
+        <div className="space-y-4">
+          <h2 className="text-lg font-bold text-slate-900">
+            Laporan Per Mobil — {namaBulan[month]} {year}
+          </h2>
+          <p className="text-xs text-slate-500">Klik tombol cetak/download untuk mencetak laporan tiap mobil dalam format nota.</p>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {cars.map((car, idx) => {
+              const carBookings = monthBookings.filter((b) => b.car_id === car.id);
+              const carRevenue = carBookings.reduce((s, b) => s + Number(b.total_cost) + Number(b.late_fee || 0), 0);
+              const carExpenses = expenses
+                .filter((e) => {
+                  const d = new Date(e.date);
+                  return e.car_id === car.id && d.getMonth() === month && d.getFullYear() === year;
+                })
+                .reduce((s, e) => s + Number(e.amount), 0);
+              const carProfit = carRevenue - carExpenses;
+              const colors = [
+                "from-blue-500 to-blue-600",
+                "from-emerald-500 to-emerald-600",
+                "from-purple-500 to-purple-600",
+                "from-orange-500 to-orange-600",
+                "from-rose-500 to-rose-600",
+                "from-teal-500 to-teal-600",
+                "from-indigo-500 to-indigo-600",
+                "from-amber-500 to-amber-600",
+                "from-cyan-500 to-cyan-600",
+                "from-pink-500 to-pink-600",
+              ];
+              const gradient = colors[idx % colors.length];
+
+              return (
+                <div key={car.id} className={`rounded-2xl bg-gradient-to-br ${gradient} p-4 text-white shadow-md`}>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-xs font-semibold opacity-80">{car.plate}</p>
+                      <p className="text-base font-bold">{car.brand} {car.model}</p>
+                    </div>
+                    <span className="text-xs bg-white/20 rounded-full px-2 py-0.5">{carBookings.length} sewa</span>
+                  </div>
+                  <div className="mt-3 space-y-1 text-xs">
+                    <div className="flex justify-between">
+                      <span className="opacity-80">Pendapatan</span>
+                      <span className="font-bold">{formatRupiah(carRevenue)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="opacity-80">Pengeluaran</span>
+                      <span className="font-bold">{formatRupiah(carExpenses)}</span>
+                    </div>
+                    <div className="flex justify-between border-t border-white/30 pt-1">
+                      <span className="font-semibold">Laba/Rugi</span>
+                      <span className="font-bold">{formatRupiah(carProfit)}</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => printCarReport(car)}
+                    className="mt-3 w-full rounded-lg bg-white/20 hover:bg-white/30 active:bg-white/40 py-2 text-xs font-semibold text-white transition-colors inline-flex items-center justify-center gap-1.5"
+                  >
+                    <Printer className="h-3.5 w-3.5" /> Cetak / Download
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
