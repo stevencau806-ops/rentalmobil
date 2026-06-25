@@ -89,6 +89,11 @@ body {
   #nota-print-area * {
     color: #0f172a !important;
   }
+  #nota-print-area img {
+    width: 100% !important;
+    max-height: none !important;
+    height: auto !important;
+  }
   #nota-print-area .text-slate-600,
   #nota-print-area .text-slate-700 {
     color: #334155 !important;

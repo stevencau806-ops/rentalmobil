@@ -65,14 +65,12 @@ export function Nota({ booking, appName = "Erlangga Rental Mobil", phone, notaTe
     <div className="bg-white p-4 text-slate-900 text-[13px] leading-snug" id="nota-print-area">
       {/* Header */}
       <div className="border-b border-slate-300 pb-3">
-        <div className="flex items-center justify-between">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="https://res.cloudinary.com/dqjh7utdb/image/upload/v1782374668/w8w1oxa6cbrtnoyvugst.png"
-            alt={appName}
-            className="w-full h-auto object-contain"
-          />
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="https://res.cloudinary.com/dqjh7utdb/image/upload/v1782374668/w8w1oxa6cbrtnoyvugst.png"
+          alt={appName}
+          className="w-full h-auto max-h-40 object-contain"
+        />
         <div className="mt-2 flex justify-end">
           <span
             className={`inline-block rounded px-2 py-0.5 text-[11px] font-bold uppercase ${
