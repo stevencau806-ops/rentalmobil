@@ -349,9 +349,14 @@ export function ExpensesClient({ initialExpenses, cars }: ExpensesClientProps) {
   return (
     <div className="space-y-4">
       {/* Summary Card */}
-      <Card className="bg-gradient-to-br from-red-50 to-orange-50 p-4">
-        <p className="text-xs font-medium uppercase text-red-700">Total Pengeluaran Bulan Ini</p>
-        <p className="mt-1 text-2xl font-bold text-red-800">{formatRupiah(totalThisMonth)}</p>
+      <Card className="bg-gradient-to-br from-red-500 to-red-600 p-5 text-white shadow-lg">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase opacity-90">Total Pengeluaran Bulan Ini</p>
+            <p className="mt-1 text-3xl font-bold">{formatRupiah(totalThisMonth)}</p>
+          </div>
+          <span className="text-4xl opacity-80">💸</span>
+        </div>
       </Card>
 
       {/* Add button */}
