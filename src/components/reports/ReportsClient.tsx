@@ -275,7 +275,24 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
     });
     const carRevenue = carBookings.reduce((s, b) => s + Number(b.total_cost) + Number(b.late_fee || 0), 0);
     const carExpensesTotal = carExpensesList.reduce((s, e) => s + Number(e.amount), 0);
-    const carProfit = carRevenue - carExpensesTotal;
+
+    // Commission calculation for this car
+    const commissionPercent = car.commission_percent ?? 0;
+    const commissionBookings = carBookings.filter((b) => b.actual_return_date);
+    const commissionDetails = commissionBookings.map((b) => {
+      const totalSewa = Number(b.total_cost);
+      let totalDenda = Number(b.late_fee || 0);
+      if (b.additional_fines) {
+        try {
+          const fines = JSON.parse(b.additional_fines) as { amount: number }[];
+          totalDenda += fines.reduce((s, f) => s + (f.amount || 0), 0);
+        } catch { /* */ }
+      }
+      const commissionAmount = Math.round((totalSewa + totalDenda) * commissionPercent / 100);
+      return { booking: b, totalSewa, totalDenda, commissionAmount };
+    });
+    const totalCommission = commissionDetails.reduce((s, c) => s + c.commissionAmount, 0);
+    const carProfit = carRevenue - carExpensesTotal - totalCommission;
 
     const bookingRows = carBookings.map((b) => {
       const total = Number(b.total_cost) + Number(b.late_fee || 0);
@@ -295,6 +312,16 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
         <td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;font-size:12px;text-align:right;font-weight:600;color:#dc2626;">${formatRupiah(Number(e.amount))}</td>
       </tr>`;
     }).join("");
+
+    const commissionRows = commissionPercent > 0 ? commissionDetails.map((c) => {
+      return `<tr>
+        <td style="padding:6px 8px;border-bottom:1px solid #ede9fe;font-size:12px;">${formatTanggal(c.booking.start_date)}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #ede9fe;font-size:12px;">${c.booking.customers?.name ?? "-"}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #ede9fe;font-size:12px;text-align:right;">${formatRupiah(c.totalSewa + c.totalDenda)}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #ede9fe;font-size:12px;text-align:center;font-weight:600;">${commissionPercent}%</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #ede9fe;font-size:12px;text-align:right;font-weight:600;color:#7c3aed;">${formatRupiah(c.commissionAmount)}</td>
+      </tr>`;
+    }).join("") : "";
 
     const html = `<!DOCTYPE html><html><head><title>Laporan ${car.brand} ${car.model} - ${namaBulan[month]} ${year}</title>
     <style>
@@ -321,10 +348,11 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
         <p style="margin:0;font-size:10px;font-weight:700;text-transform:uppercase;color:#64748b;">Identitas Kendaraan</p>
         <p style="margin:4px 0 0;font-size:16px;font-weight:700;">${car.brand} ${car.model}</p>
         <p style="margin:2px 0 0;font-size:12px;color:#334155;">Plat: ${car.plate} &nbsp;|&nbsp; Tahun: ${car.year ?? "-"} &nbsp;|&nbsp; Tarif: ${formatRupiah(car.tariff_per_day)}/hari</p>
+        ${commissionPercent > 0 ? `<p style="margin:4px 0 0;font-size:11px;color:#7c3aed;font-weight:600;">&#9733; Potongan Admin: ${commissionPercent}% ${car.commission_note ? "— " + car.commission_note : ""}</p>` : ""}
       </div>
 
       <!-- Ringkasan -->
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
+      <div style="display:grid;grid-template-columns:${commissionPercent > 0 ? "1fr 1fr 1fr 1fr" : "1fr 1fr 1fr"};gap:10px;margin-bottom:16px;">
         <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:12px;">
           <p style="margin:0;font-size:10px;font-weight:700;text-transform:uppercase;color:#047857;">Pendapatan</p>
           <p style="margin:4px 0 0;font-size:16px;font-weight:700;color:#065f46;">${formatRupiah(carRevenue)}</p>
@@ -335,8 +363,13 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
           <p style="margin:4px 0 0;font-size:16px;font-weight:700;color:#991b1b;">${formatRupiah(carExpensesTotal)}</p>
           <p style="margin:2px 0 0;font-size:10px;color:#b91c1c;">${carExpensesList.length} transaksi</p>
         </div>
+        ${commissionPercent > 0 ? `<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:12px;">
+          <p style="margin:0;font-size:10px;font-weight:700;text-transform:uppercase;color:#6d28d9;">Admin ${commissionPercent}%</p>
+          <p style="margin:4px 0 0;font-size:16px;font-weight:700;color:#5b21b6;">${formatRupiah(totalCommission)}</p>
+          <p style="margin:2px 0 0;font-size:10px;color:#6d28d9;">${commissionBookings.length} booking</p>
+        </div>` : ""}
         <div style="background:${carProfit >= 0 ? "#eff6ff" : "#fef2f2"};border:1px solid ${carProfit >= 0 ? "#bfdbfe" : "#fecaca"};border-radius:8px;padding:12px;">
-          <p style="margin:0;font-size:10px;font-weight:700;text-transform:uppercase;color:${carProfit >= 0 ? "#1d4ed8" : "#b91c1c"};">${carProfit >= 0 ? "Laba" : "Rugi"}</p>
+          <p style="margin:0;font-size:10px;font-weight:700;text-transform:uppercase;color:${carProfit >= 0 ? "#1d4ed8" : "#b91c1c"};">${carProfit >= 0 ? "Laba Bersih" : "Rugi"}</p>
           <p style="margin:4px 0 0;font-size:16px;font-weight:700;color:${carProfit >= 0 ? "#1e40af" : "#991b1b"};">${formatRupiah(carProfit)}</p>
         </div>
       </div>
@@ -390,6 +423,33 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
           </table>`
         }
       </div>
+
+      ${commissionPercent > 0 ? `
+      <!-- Potongan Admin -->
+      <div style="margin-bottom:16px;">
+        <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;color:#5b21b6;">Detail Potongan Admin (${commissionPercent}%)</p>
+        ${commissionDetails.length === 0
+          ? '<p style="font-size:12px;color:#94a3b8;text-align:center;padding:16px 0;">Belum ada booking selesai periode ini.</p>'
+          : `<table>
+            <thead>
+              <tr style="background:#f5f3ff;">
+                <th style="padding:6px 8px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:#6d28d9;border-bottom:2px solid #ddd6fe;">Tanggal</th>
+                <th style="padding:6px 8px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:#6d28d9;border-bottom:2px solid #ddd6fe;">Pelanggan</th>
+                <th style="padding:6px 8px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;color:#6d28d9;border-bottom:2px solid #ddd6fe;">Total Sewa</th>
+                <th style="padding:6px 8px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;color:#6d28d9;border-bottom:2px solid #ddd6fe;">%</th>
+                <th style="padding:6px 8px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;color:#6d28d9;border-bottom:2px solid #ddd6fe;">Potongan</th>
+              </tr>
+            </thead>
+            <tbody>${commissionRows}</tbody>
+            <tfoot>
+              <tr style="border-top:2px solid #5b21b6;">
+                <td colspan="4" style="padding:8px;text-align:right;font-weight:700;font-size:12px;color:#5b21b6;">TOTAL POTONGAN ADMIN</td>
+                <td style="padding:8px;text-align:right;font-weight:700;font-size:14px;color:#5b21b6;">${formatRupiah(totalCommission)}</td>
+              </tr>
+            </tfoot>
+          </table>`
+        }
+      </div>` : ""}
 
       <!-- Footer -->
       <div style="border-top:1px solid #e2e8f0;padding-top:12px;margin-top:20px;">
