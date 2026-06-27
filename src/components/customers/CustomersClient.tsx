@@ -2,7 +2,7 @@
 
 import { useState, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { TriangleAlert, Upload, Camera, Eye, X, Loader2, Ban, Search, Pencil, Trash2 } from "lucide-react";
+import { TriangleAlert, Upload, Camera, Eye, X, Loader2, Ban, Search, Pencil, Trash2, Users, CalendarPlus, ShieldBan, Phone, MapPin, CreditCard, Image } from "lucide-react";
 import type { Customer } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
@@ -194,10 +194,12 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
       <div className="rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 p-5 text-white shadow-lg">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase opacity-90">Total Pelanggan</p>
+            <p className="text-xs font-semibold uppercase tracking-wide opacity-90">Total Pelanggan</p>
             <p className="mt-1 text-3xl font-bold">{customers.length}</p>
           </div>
-          <span className="text-4xl opacity-80">👥</span>
+          <div className="rounded-xl bg-white/15 p-3">
+            <Users className="h-7 w-7" />
+          </div>
         </div>
       </div>
 
@@ -219,7 +221,9 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
       <div className="space-y-3">
         {filtered.length === 0 ? (
           <div className="rounded-xl border border-dashed border-slate-300 px-4 py-10 text-center">
-            <p className="text-2xl mb-2">👥</p>
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
+              <Users className="h-6 w-6 text-slate-400" />
+            </div>
             <p className="text-sm font-medium text-slate-500">Belum ada pelanggan</p>
           </div>
         ) : (
@@ -289,47 +293,58 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
           return (
             <div className="space-y-3">
               {/* Nama - Purple gradient */}
-              <div className="rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 p-4 text-white">
-                <p className="text-[10px] font-bold uppercase opacity-80">Nama Pelanggan</p>
-                <p className="text-lg font-bold mt-0.5">{c.name}</p>
+              <div className="rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 p-4 text-white shadow-sm">
+                <div className="flex items-center gap-2 opacity-80 mb-1">
+                  <Users className="h-3.5 w-3.5" />
+                  <p className="text-[10px] font-bold uppercase tracking-wide">Nama Pelanggan</p>
+                </div>
+                <p className="text-lg font-bold">{c.name}</p>
                 {isBlacklisted && (
-                  <span className="inline-block mt-1 rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white">
-                    BLACKLIST
+                  <span className="inline-flex items-center gap-1 mt-1.5 rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-bold">
+                    <ShieldBan className="h-3 w-3" /> BLACKLIST
                   </span>
                 )}
               </div>
 
               {/* NIK - Blue gradient */}
-              <div className="rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 p-4 text-white">
-                <p className="text-[10px] font-bold uppercase opacity-80">NIK (KTP)</p>
-                <p className="text-base font-bold font-mono mt-0.5">{c.nik}</p>
+              <div className="rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 p-4 text-white shadow-sm">
+                <div className="flex items-center gap-2 opacity-80 mb-1">
+                  <CreditCard className="h-3.5 w-3.5" />
+                  <p className="text-[10px] font-bold uppercase tracking-wide">NIK (KTP)</p>
+                </div>
+                <p className="text-base font-bold font-mono tracking-wider">{c.nik}</p>
               </div>
 
               {/* HP + Alamat - Teal gradient */}
-              <div className="rounded-xl bg-gradient-to-r from-teal-500 to-teal-600 p-4 text-white">
-                <div className="flex justify-between">
-                  <div>
-                    <p className="text-[10px] font-bold uppercase opacity-80">No. HP</p>
-                    <p className="text-sm font-semibold mt-0.5">{c.phone || "-"}</p>
-                  </div>
+              <div className="rounded-xl bg-gradient-to-r from-teal-500 to-teal-600 p-4 text-white shadow-sm">
+                <div className="flex items-center gap-2 opacity-80 mb-1">
+                  <Phone className="h-3.5 w-3.5" />
+                  <p className="text-[10px] font-bold uppercase tracking-wide">No. HP</p>
                 </div>
+                <p className="text-sm font-semibold">{c.phone || "-"}</p>
                 {c.address && (
-                  <div className="mt-2 border-t border-white/30 pt-2">
-                    <p className="text-[10px] font-bold uppercase opacity-80">Alamat</p>
-                    <p className="text-xs mt-0.5 opacity-95">{c.address}</p>
+                  <div className="mt-3 border-t border-white/30 pt-3">
+                    <div className="flex items-center gap-2 opacity-80 mb-1">
+                      <MapPin className="h-3.5 w-3.5" />
+                      <p className="text-[10px] font-bold uppercase tracking-wide">Alamat</p>
+                    </div>
+                    <p className="text-xs opacity-95 leading-relaxed">{c.address}</p>
                   </div>
                 )}
               </div>
 
               {/* KTP Photo */}
               {c.ktp_url && (
-                <div className="rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 p-4 text-white">
-                  <p className="text-[10px] font-bold uppercase opacity-80">Foto KTP</p>
+                <div className="rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 p-4 text-white shadow-sm">
+                  <div className="flex items-center gap-2 opacity-80 mb-2">
+                    <Image className="h-3.5 w-3.5" />
+                    <p className="text-[10px] font-bold uppercase tracking-wide">Foto KTP</p>
+                  </div>
                   <button
                     onClick={() => { setDetailCustomer(null); setViewKtpUrl(c.ktp_url); }}
-                    className="mt-2 w-full rounded-lg bg-white/20 hover:bg-white/30 py-2 text-xs font-semibold transition-colors"
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-white/20 hover:bg-white/30 py-2.5 text-xs font-semibold transition-colors"
                   >
-                    <Eye className="inline h-3.5 w-3.5 mr-1" /> Lihat Foto KTP
+                    <Eye className="h-3.5 w-3.5" /> Lihat Foto KTP
                   </button>
                 </div>
               )}
@@ -341,9 +356,9 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
                     setDetailCustomer(null);
                     router.push(`/booking?customer=${c.id}`);
                   }}
-                  className="rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 py-3 text-sm font-semibold text-white hover:opacity-90 active:opacity-80 transition-opacity shadow-sm"
                 >
-                  📋 Booking
+                  <CalendarPlus className="h-4 w-4" /> Booking
                 </button>
                 {!isBlacklisted ? (
                   <button
@@ -352,13 +367,13 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
                       setBlacklistCustomer(c);
                       setBlacklistReason("");
                     }}
-                    className="rounded-lg bg-gradient-to-r from-red-500 to-red-600 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-red-500 to-red-600 py-3 text-sm font-semibold text-white hover:opacity-90 active:opacity-80 transition-opacity shadow-sm"
                   >
-                    🚫 Blacklist
+                    <ShieldBan className="h-4 w-4" /> Blacklist
                   </button>
                 ) : (
-                  <div className="rounded-lg bg-red-100 py-2.5 text-center text-sm font-semibold text-red-600">
-                    🚫 Sudah di-Blacklist
+                  <div className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-100 py-3 text-sm font-semibold text-red-600">
+                    <ShieldBan className="h-4 w-4" /> Sudah Diblokir
                   </div>
                 )}
               </div>
