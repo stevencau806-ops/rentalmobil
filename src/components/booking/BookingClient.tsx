@@ -86,6 +86,9 @@ export function BookingClient({
   const [returnForm, setReturnForm] = useState<ReturnForm>({ actual_return_date: "" });
   const [additionalFines, setAdditionalFines] = useState<AdditionalFine[]>([]);
   const [processingReturn, setProcessingReturn] = useState(false);
+  const [extendOpen, setExtendOpen] = useState(false);
+  const [extendDate, setExtendDate] = useState("");
+  const [extendSaving, setExtendSaving] = useState(false);
 
   const [notaBooking, setNotaBooking] = useState<Booking | null>(null);
   const [detailBooking, setDetailBooking] = useState<Booking | null>(null);
@@ -278,6 +281,52 @@ export function BookingClient({
     await refresh();
   }
 
+  // ---- Extend rental time (Tambah Waktu) ----
+  async function handleExtendTime(e: React.FormEvent) {
+    e.preventDefault();
+    if (!returnBooking || !extendDate) return;
+
+    // Validate new end date is after current end date
+    const currentEnd = new Date(returnBooking.end_date);
+    const newEnd = new Date(extendDate);
+    if (newEnd <= currentEnd) {
+      toast("Tanggal perpanjangan harus setelah tanggal selesai saat ini", "error");
+      return;
+    }
+
+    // Calculate new duration
+    const startDate = new Date(returnBooking.start_date);
+    const diffMs = newEnd.getTime() - startDate.getTime();
+    const newDays = Math.max(Math.ceil(diffMs / (1000 * 60 * 60 * 24)), 1);
+
+    // Get tariff per day from the car
+    const car = cars.find((c) => c.id === returnBooking.car_id);
+    const tariffPerDay = car?.tariff_per_day ?? 0;
+    const newTotalCost = newDays * tariffPerDay;
+
+    setExtendSaving(true);
+    const { error } = await createClient()
+      .from("bookings")
+      .update({
+        end_date: extendDate,
+        duration_days: newDays,
+        total_cost: newTotalCost,
+      })
+      .eq("id", returnBooking.id);
+    setExtendSaving(false);
+
+    if (error) {
+      toast(`Gagal: ${error.message}`, "error");
+      return;
+    }
+
+    toast(`Waktu sewa diperpanjang sampai ${formatTanggalWaktu(extendDate)} (${newDays} hari)`, "success");
+    setExtendOpen(false);
+    setExtendDate("");
+    setReturnBooking(null);
+    await refresh();
+  }
+
   // ---- Settle late fee (mark fine as paid) ----
   async function settleFine(b: Booking) {
     const { error } = await createClient()
@@ -346,12 +395,16 @@ export function BookingClient({
       ``,
       `*Pelanggan:* ${b.customers?.name ?? "-"}`,
       `*Mobil:* ${b.cars?.brand} ${b.cars?.model} (${b.cars?.plate})`,
-      `*Periode:* ${formatTanggal(b.start_date)} → ${formatTanggal(b.end_date)} (${b.duration_days} hari)`,
+      `*Mulai:* ${formatTanggalWaktu(b.start_date)}`,
+      `*Selesai:* ${formatTanggalWaktu(b.end_date)}`,
+      `*Durasi:* ${b.duration_days} hari`,
+      b.actual_return_date ? `*Dikembalikan:* ${formatTanggalWaktu(b.actual_return_date)}` : "",
       ``,
       `━━━━━━━━━━━━━━━`,
       `*Sewa:* ${formatRupiah(Number(b.total_cost))}`,
       lateFee > 0 ? `*Denda Terlambat:* ${formatRupiah(lateFee)}` : "",
       additionalLines.trim(),
+      totalFines > 0 ? `*Total Denda:* ${formatRupiah(totalFines)}` : "",
       `━━━━━━━━━━━━━━━`,
       `*TOTAL: ${formatRupiah(grandTotal)}*`,
       `*Status:* ${b.payment_status === "paid" ? "✅ LUNAS" : "⏳ BELUM BAYAR"}`,
@@ -819,6 +872,59 @@ export function BookingClient({
                   <span className="text-sm font-bold text-red-700">
                     {formatRupiah(additionalFines.reduce((s, f) => s + (f.amount || 0), 0))}
                   </span>
+                </div>
+              )}
+            </div>
+
+            {/* Tambah Waktu (Extend Rental) */}
+            <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-blue-800">Perpanjang Waktu Sewa</p>
+                  <p className="text-xs text-blue-600">Jatuh tempo saat ini: {formatTanggalWaktu(returnBooking.end_date)}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setExtendOpen(!extendOpen); setExtendDate(returnBooking.end_date.slice(0, 16)); }}
+                  className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition-colors"
+                >
+                  {extendOpen ? "Batal" : "Tambah Waktu"}
+                </button>
+              </div>
+              {extendOpen && (
+                <div className="mt-3 space-y-3 border-t border-blue-200 pt-3">
+                  <Input
+                    label="Perpanjang Sampai"
+                    type="datetime-local"
+                    required
+                    min={returnBooking.end_date.slice(0, 16)}
+                    value={extendDate}
+                    onChange={(e) => setExtendDate(e.target.value)}
+                  />
+                  {extendDate && new Date(extendDate) > new Date(returnBooking.end_date) && (() => {
+                    const car = cars.find((c) => c.id === returnBooking.car_id);
+                    const startDate = new Date(returnBooking.start_date);
+                    const newEnd = new Date(extendDate);
+                    const newDays = Math.max(Math.ceil((newEnd.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)), 1);
+                    const newTotal = newDays * (car?.tariff_per_day ?? 0);
+                    const oldTotal = Number(returnBooking.total_cost);
+                    const selisih = newTotal - oldTotal;
+                    return (
+                      <div className="rounded-lg bg-white border border-blue-200 px-3 py-2 text-xs space-y-1">
+                        <div className="flex justify-between"><span className="text-slate-600">Durasi baru</span><span className="font-semibold">{newDays} hari</span></div>
+                        <div className="flex justify-between"><span className="text-slate-600">Total baru</span><span className="font-semibold">{formatRupiah(newTotal)}</span></div>
+                        <div className="flex justify-between border-t pt-1"><span className="text-blue-700 font-medium">Tambahan biaya</span><span className="font-bold text-blue-800">{formatRupiah(selisih)}</span></div>
+                      </div>
+                    );
+                  })()}
+                  <button
+                    type="button"
+                    onClick={handleExtendTime}
+                    disabled={extendSaving || !extendDate}
+                    className="w-full rounded-lg bg-blue-600 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                  >
+                    {extendSaving ? "Menyimpan..." : "Konfirmasi Perpanjangan"}
+                  </button>
                 </div>
               )}
             </div>

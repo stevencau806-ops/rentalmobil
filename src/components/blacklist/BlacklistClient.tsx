@@ -31,6 +31,7 @@ export function BlacklistClient({ initialList, customers }: BlacklistClientProps
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [viewReason, setViewReason] = useState<Blacklist | null>(null);
   const toast = useToast();
 
   function openAdd() {
@@ -115,7 +116,12 @@ export function BlacklistClient({ initialList, customers }: BlacklistClientProps
       key: "reason",
       header: "Alasan",
       render: (b) => (
-        <span className="text-slate-600 line-clamp-2">{b.reason}</span>
+        <button
+          onClick={() => setViewReason(b)}
+          className="text-left text-slate-600 line-clamp-2 hover:text-blue-600 hover:underline cursor-pointer"
+        >
+          {b.reason}
+        </button>
       ),
     },
     {
@@ -212,6 +218,32 @@ export function BlacklistClient({ initialList, customers }: BlacklistClientProps
         onClose={() => setDeleteId(null)}
         loading={deleting}
       />
+
+      {/* View Full Reason Modal */}
+      <Modal open={!!viewReason} onClose={() => setViewReason(null)} title="Detail Blacklist" size="md">
+        {viewReason && (
+          <div className="space-y-3">
+            <div className="rounded-xl bg-red-50 border border-red-200 p-4">
+              <p className="text-xs font-semibold uppercase text-red-600 mb-1">Pelanggan</p>
+              <p className="text-base font-bold text-slate-900">{viewReason.customers?.name ?? "(Tidak terdaftar)"}</p>
+              <p className="text-sm text-slate-600 font-mono mt-0.5">NIK: {viewReason.nik}</p>
+            </div>
+            <div className="rounded-xl bg-slate-50 border border-slate-200 p-4">
+              <p className="text-xs font-semibold uppercase text-slate-500 mb-1">Alasan Blacklist</p>
+              <p className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">{viewReason.reason}</p>
+            </div>
+            <div className="text-xs text-slate-400">
+              Ditambahkan: {formatTanggal(viewReason.created_at)}
+            </div>
+            <button
+              onClick={() => setViewReason(null)}
+              className="w-full rounded-lg border border-slate-200 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+            >
+              Tutup
+            </button>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

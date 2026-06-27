@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { TriangleAlert, Upload, Camera, Eye, X, Loader2 } from "lucide-react";
+import { TriangleAlert, Upload, Camera, Eye, X, Loader2, Ban } from "lucide-react";
 import type { Customer } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { DataTable } from "@/components/ui/DataTable";
@@ -50,6 +50,9 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
   const [viewKtpUrl, setViewKtpUrl] = useState<string | null>(null);
   const [bookingPrompt, setBookingPrompt] = useState(false);
   const [newCustomerId, setNewCustomerId] = useState<string | null>(null);
+  const [blacklistCustomer, setBlacklistCustomer] = useState<Customer | null>(null);
+  const [blacklistReason, setBlacklistReason] = useState("");
+  const [blacklistSaving, setBlacklistSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const toast = useToast();
@@ -230,6 +233,28 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
     if (data) setCustomers(data as Customer[]);
   }
 
+  async function handleBlacklist(e: React.FormEvent) {
+    e.preventDefault();
+    if (!blacklistCustomer || !blacklistReason.trim()) {
+      toast("Alasan blacklist wajib diisi", "error");
+      return;
+    }
+    setBlacklistSaving(true);
+    const { error } = await createClient().from("blacklist").insert({
+      customer_id: blacklistCustomer.id,
+      nik: blacklistCustomer.nik,
+      reason: blacklistReason.trim(),
+    });
+    setBlacklistSaving(false);
+    if (error) {
+      toast(`Gagal: ${error.message}`, "error");
+      return;
+    }
+    toast(`${blacklistCustomer.name} ditambahkan ke blacklist`, "success");
+    setBlacklistCustomer(null);
+    setBlacklistReason("");
+  }
+
   const columns: Column<Customer>[] = [
     {
       key: "name",
@@ -285,21 +310,35 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
       key: "actions",
       header: "",
       className: "text-right",
-      render: (c) => (
-        <div className="flex justify-end gap-1">
-          <Button size="sm" variant="ghost" onClick={() => openEdit(c)}>
-            Edit
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="text-red-600 hover:bg-red-50"
-            onClick={() => setDeleteId(c.id)}
-          >
-            Hapus
-          </Button>
-        </div>
-      ),
+      render: (c) => {
+        const isBlacklisted = blacklistNiks.includes(c.nik);
+        return (
+          <div className="flex justify-end gap-1">
+            {!isBlacklisted && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-orange-600 hover:bg-orange-50"
+                onClick={() => { setBlacklistCustomer(c); setBlacklistReason(""); }}
+              >
+                <Ban className="h-3.5 w-3.5 mr-1" />
+                Blokir
+              </Button>
+            )}
+            <Button size="sm" variant="ghost" onClick={() => openEdit(c)}>
+              Edit
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-red-600 hover:bg-red-50"
+              onClick={() => setDeleteId(c.id)}
+            >
+              Hapus
+            </Button>
+          </div>
+        );
+      },
     },
   ];
 
@@ -522,6 +561,45 @@ export function CustomersClient({ initialCustomers, blacklistNiks }: CustomersCl
             </Button>
           </div>
         </div>
+      </Modal>
+
+      {/* Blacklist Modal */}
+      <Modal
+        open={!!blacklistCustomer}
+        onClose={() => setBlacklistCustomer(null)}
+        title="Blokir / Blacklist Pelanggan"
+        size="md"
+      >
+        {blacklistCustomer && (
+          <form onSubmit={handleBlacklist} className="space-y-4">
+            <div className="rounded-xl bg-red-50 border border-red-200 p-3">
+              <p className="text-xs font-semibold uppercase text-red-600">Pelanggan yang akan diblokir</p>
+              <p className="text-base font-bold text-slate-900 mt-1">{blacklistCustomer.name}</p>
+              <p className="text-sm text-slate-600 font-mono">NIK: {blacklistCustomer.nik}</p>
+              {blacklistCustomer.phone && <p className="text-sm text-slate-500">HP: {blacklistCustomer.phone}</p>}
+            </div>
+            <Textarea
+              label="Alasan Blacklist"
+              required
+              rows={3}
+              value={blacklistReason}
+              onChange={(e) => setBlacklistReason(e.target.value)}
+              placeholder="Contoh: Tidak mengembalikan mobil tepat waktu, merusak kendaraan, dll."
+            />
+            <div className="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+              <TriangleAlert className="mt-px h-4 w-4 shrink-0" />
+              <span>Pelanggan yang diblokir akan mendapat peringatan di semua halaman booking.</span>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setBlacklistCustomer(null)}>
+                Batal
+              </Button>
+              <Button type="submit" variant="danger" disabled={blacklistSaving}>
+                {blacklistSaving ? "Memproses..." : "Konfirmasi Blacklist"}
+              </Button>
+            </div>
+          </form>
+        )}
       </Modal>
     </div>
   );
