@@ -746,7 +746,7 @@ export function BookingClient({
                 {returnBooking.customers?.name} — {returnBooking.cars?.brand} {returnBooking.cars?.model}
               </p>
               <p className="text-xs text-slate-500">
-                Jatuh tempo: {formatTanggal(returnBooking.end_date)} (23:59)
+                Jatuh tempo: {formatTanggalWaktu(returnBooking.end_date)}
               </p>
               <p className="mt-1 text-xs text-slate-500">
                 Denda keterlambatan: {formatRupiah(finePerHour)}/jam
