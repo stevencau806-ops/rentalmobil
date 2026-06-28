@@ -254,7 +254,7 @@ export function BookingClient({
     const { error } = await supabase
       .from("bookings")
       .update({
-        actual_return_date: actualReturn,
+        actual_return_date: actualReturn + ":00+07:00",
         late_fee: fee,
         additional_fines: validFines.length > 0 ? JSON.stringify(validFines) : null,
         fine_status: hasFines ? "pending" : "none",
@@ -322,7 +322,7 @@ export function BookingClient({
     const { error } = await createClient()
       .from("bookings")
       .update({
-        end_date: extendDate,
+        end_date: extendDate + ":00+07:00",
         duration_days: newDays,
         total_cost: newTotalCost,
         notes: updatedNotes,
