@@ -294,15 +294,29 @@ export function BookingClient({
       return;
     }
 
-    // Calculate new duration
+    // Calculate new duration from start
     const startDate = new Date(returnBooking.start_date);
     const diffMs = newEnd.getTime() - startDate.getTime();
     const newDays = Math.max(Math.ceil(diffMs / (1000 * 60 * 60 * 24)), 1);
+
+    // Calculate original duration (before extension)
+    const originalDiffMs = currentEnd.getTime() - startDate.getTime();
+    const originalDays = Math.max(Math.ceil(originalDiffMs / (1000 * 60 * 60 * 24)), 1);
+    const extendedDays = newDays - originalDays;
 
     // Get tariff per day from the car
     const car = cars.find((c) => c.id === returnBooking.car_id);
     const tariffPerDay = car?.tariff_per_day ?? 0;
     const newTotalCost = newDays * tariffPerDay;
+
+    // Store extension info in notes with marker: [EXT:originalEndDate|extDays]
+    const extMarker = `[EXT:${returnBooking.end_date}|${extendedDays}]`;
+    const currentNotes = returnBooking.notes || "";
+    // Only add marker if not already extended (avoid duplicates)
+    const hasExt = currentNotes.includes("[EXT:");
+    const updatedNotes = hasExt
+      ? currentNotes.replace(/\[EXT:[^\]]+\]/, extMarker)
+      : (currentNotes ? `${currentNotes}\n${extMarker}` : extMarker);
 
     setExtendSaving(true);
     const { error } = await createClient()
@@ -311,6 +325,7 @@ export function BookingClient({
         end_date: extendDate,
         duration_days: newDays,
         total_cost: newTotalCost,
+        notes: updatedNotes,
       })
       .eq("id", returnBooking.id);
     setExtendSaving(false);
@@ -320,7 +335,7 @@ export function BookingClient({
       return;
     }
 
-    toast(`Waktu sewa diperpanjang sampai ${formatTanggalWaktu(extendDate)} (${newDays} hari)`, "success");
+    toast(`Waktu sewa diperpanjang +${extendedDays} hari sampai ${formatTanggalWaktu(extendDate)}`, "success");
     setExtendOpen(false);
     setExtendDate("");
     setReturnBooking(null);

@@ -58,6 +58,18 @@ export function Nota({ booking, appName = "Erlangga Rental Mobil", phone, notaTe
   const terms = parseTerms(notaTerms);
   const signatures = parseSignatures(notaSignatures);
 
+  // Parse extension info from notes: [EXT:originalEndDate|extDays]
+  let originalEndDate: string | null = null;
+  let extendedDays = 0;
+  let cleanNotes = booking.notes || "";
+  const extMatch = cleanNotes.match(/\[EXT:([^|]+)\|(\d+)\]/);
+  if (extMatch) {
+    originalEndDate = extMatch[1];
+    extendedDays = Number(extMatch[2]);
+    cleanNotes = cleanNotes.replace(/\[EXT:[^\]]+\]/, "").trim();
+  }
+  const originalDays = booking.duration_days - extendedDays;
+
   return (
     <div className="nota-receipt bg-white px-3 py-2 font-mono text-[10px] leading-normal text-black" id="nota-print-area">
       {/* Header */}
@@ -93,18 +105,25 @@ export function Nota({ booking, appName = "Erlangga Rental Mobil", phone, notaTe
 
       {/* Periode */}
       <div className="nota-section">
-        <p className="text-[8px] font-semibold">PERIODE SEWA: {booking.duration_days} Hari</p>
-        <p>{formatTanggalWaktu(booking.start_date)} s/d {formatTanggalWaktu(booking.end_date)}</p>
+        <p className="text-[8px] font-semibold">PERIODE SEWA: {originalDays} Hari</p>
+        <p>{formatTanggalWaktu(booking.start_date)} s/d {originalEndDate ? formatTanggalWaktu(originalEndDate) : formatTanggalWaktu(booking.end_date)}</p>
+        {extendedDays > 0 && (
+          <>
+            <p className="mt-1 text-[8px] font-semibold">PERPANJANGAN: +{extendedDays} Hari</p>
+            <p>{originalEndDate ? formatTanggalWaktu(originalEndDate) : ""} s/d {formatTanggalWaktu(booking.end_date)}</p>
+            <p className="text-[8px] mt-0.5">Total: {booking.duration_days} Hari</p>
+          </>
+        )}
         {booking.actual_return_date && (
           <p className="mt-0.5">Dikembalikan: {formatTanggalWaktu(booking.actual_return_date)}</p>
         )}
       </div>
 
       {/* Catatan */}
-      {booking.notes && (
+      {cleanNotes && (
         <div className="nota-section">
           <p className="text-[8px] font-semibold">CATATAN</p>
-          <p>{booking.notes}</p>
+          <p>{cleanNotes}</p>
         </div>
       )}
 
@@ -112,10 +131,23 @@ export function Nota({ booking, appName = "Erlangga Rental Mobil", phone, notaTe
 
       {/* Biaya */}
       <div className="nota-section">
-        <div className="flex justify-between">
-          <span>Sewa Mobil</span>
-          <span>{booking.duration_days} x {formatRupiah(booking.cars?.tariff_per_day ?? 0)}</span>
-        </div>
+        {extendedDays > 0 ? (
+          <>
+            <div className="flex justify-between">
+              <span>Sewa Awal</span>
+              <span>{originalDays} x {formatRupiah(booking.cars?.tariff_per_day ?? 0)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Perpanjangan</span>
+              <span>{extendedDays} x {formatRupiah(booking.cars?.tariff_per_day ?? 0)}</span>
+            </div>
+          </>
+        ) : (
+          <div className="flex justify-between">
+            <span>Sewa Mobil</span>
+            <span>{booking.duration_days} x {formatRupiah(booking.cars?.tariff_per_day ?? 0)}</span>
+          </div>
+        )}
         {lateFee > 0 && (
           <div className="flex justify-between">
             <span>Denda Keterlambatan</span>
