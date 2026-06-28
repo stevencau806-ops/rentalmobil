@@ -71,47 +71,47 @@ export function Nota({ booking, appName = "Erlangga Rental Mobil", phone, notaTe
   const originalDays = booking.duration_days - extendedDays;
 
   return (
-    <div className="nota-receipt bg-white px-3 py-2 font-mono text-[10px] leading-normal text-black" id="nota-print-area">
+    <div className="nota-receipt bg-white px-3 py-2 font-mono text-[11px] leading-normal text-black" id="nota-print-area">
       {/* Header */}
       <div className="nota-section text-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="https://res.cloudinary.com/dqjh7utdb/image/upload/v1782311347/u5zbqafgubkyjckrjseq.png" alt={appName} className="mx-auto h-14 w-auto" />
-        <p className="font-semibold text-[10px]">{appName}</p>
-        {phone && <p className="text-[9px]">{phone}</p>}
+        <p className="font-semibold text-[11px]">{appName}</p>
+        {phone && <p className="text-[10px]">{phone}</p>}
       </div>
       <div className="nota-divider" />
 
       {/* Status */}
       <div className="nota-section text-center">
-        <span className="border border-black px-1.5 py-0.5 text-[9px] font-semibold">
+        <span className="border border-black px-1.5 py-0.5 text-[10px] font-semibold">
           {booking.payment_status === "paid" ? "LUNAS" : "BELUM BAYAR"}
         </span>
-        <span className="ml-2 text-[8px]">#{booking.id.slice(0, 8).toUpperCase()}</span>
+        <span className="ml-2 text-[9px]">#{booking.id.slice(0, 8).toUpperCase()}</span>
       </div>
       <div className="nota-divider" />
 
       {/* Pelanggan */}
       <div className="nota-section">
-        <p className="text-[8px] font-semibold">PELANGGAN</p>
+        <p className="text-[9px] font-semibold">PELANGGAN</p>
         <p className="font-semibold">{booking.customers?.name ?? "-"}</p>
         <p>NIK: {booking.customers?.nik ?? "-"} | HP: {booking.customers?.phone ?? "-"}</p>
       </div>
 
       {/* Kendaraan */}
       <div className="nota-section">
-        <p className="text-[8px] font-semibold">KENDARAAN</p>
+        <p className="text-[9px] font-semibold">KENDARAAN</p>
         <p>{booking.cars?.brand} {booking.cars?.model} | Plat: {booking.cars?.plate ?? "-"}</p>
       </div>
 
       {/* Periode */}
       <div className="nota-section">
-        <p className="text-[8px] font-semibold">PERIODE SEWA: {originalDays} Hari</p>
+        <p className="text-[9px] font-semibold">PERIODE SEWA: {originalDays} Hari</p>
         <p>{formatTanggalWaktu(booking.start_date)} s/d {originalEndDate ? formatTanggalWaktu(originalEndDate) : formatTanggalWaktu(booking.end_date)}</p>
         {extendedDays > 0 && (
           <>
-            <p className="mt-1 text-[8px] font-semibold">PERPANJANGAN: +{extendedDays} Hari</p>
+            <p className="mt-1 text-[9px] font-semibold">PERPANJANGAN: +{extendedDays} Hari</p>
             <p>{originalEndDate ? formatTanggalWaktu(originalEndDate) : ""} s/d {formatTanggalWaktu(booking.end_date)}</p>
-            <p className="text-[8px] mt-0.5">Total: {booking.duration_days} Hari</p>
+            <p className="text-[9px] mt-0.5">Total: {booking.duration_days} Hari</p>
           </>
         )}
         {booking.actual_return_date && (
@@ -122,7 +122,7 @@ export function Nota({ booking, appName = "Erlangga Rental Mobil", phone, notaTe
       {/* Catatan */}
       {cleanNotes && (
         <div className="nota-section">
-          <p className="text-[8px] font-semibold">CATATAN</p>
+          <p className="text-[9px] font-semibold">CATATAN</p>
           <p>{cleanNotes}</p>
         </div>
       )}
@@ -161,7 +161,7 @@ export function Nota({ booking, appName = "Erlangga Rental Mobil", phone, notaTe
           </div>
         ))}
       </div>
-      <div className="nota-section flex justify-between font-semibold text-[11px]">
+      <div className="nota-section flex justify-between font-semibold text-[12px]">
         <span>TOTAL</span>
         <span>{formatRupiah(total)}</span>
       </div>
@@ -169,8 +169,8 @@ export function Nota({ booking, appName = "Erlangga Rental Mobil", phone, notaTe
 
       {/* Ketentuan */}
       <div className="nota-section">
-        <p className="text-[8px] font-semibold">KETENTUAN SEWA</p>
-        <ol className="nota-terms list-decimal pl-3 text-[8px]">
+        <p className="text-[9px] font-semibold">KETENTUAN SEWA</p>
+        <ol className="nota-terms list-decimal pl-3 text-[9px]">
           {terms.map((t, i) => <li key={i}>{t}</li>)}
         </ol>
       </div>
@@ -179,17 +179,17 @@ export function Nota({ booking, appName = "Erlangga Rental Mobil", phone, notaTe
       {/* TTD */}
       <div className="nota-section flex justify-between px-2">
         <div className="text-center">
-          <p className="text-[9px]">{signatures.left}</p>
+          <p className="text-[10px]">{signatures.left}</p>
           <div className="mt-8 w-16 border-b border-black" />
         </div>
         <div className="text-center">
-          <p className="text-[9px]">{signatures.right}</p>
+          <p className="text-[10px]">{signatures.right}</p>
           <div className="mt-8 w-16 border-b border-black" />
         </div>
       </div>
 
       {/* Footer */}
-      <div className="nota-section text-center text-[8px]">
+      <div className="nota-section text-center text-[9px]">
         <p>Terima kasih - {appName}</p>
         <p>Dicetak: {formatTanggalWaktu(new Date().toISOString())}</p>
       </div>
