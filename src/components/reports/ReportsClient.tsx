@@ -108,10 +108,8 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
   }));
 
   // ---- Commission calculation ----
-  // Only from completed bookings (actual_return_date exists) with car that has commission
+  // From all bookings with car that has commission
   const commissionData = useMemo(() => {
-    const completedBookings = bookings.filter((b) => b.actual_return_date);
-
     function calcDenda(b: typeof bookings[0]): number {
       let denda = Number(b.late_fee || 0);
       if (b.additional_fines) {
@@ -123,9 +121,9 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
       return denda;
     }
 
-    const monthCommissions = completedBookings
+    const monthCommissions = bookings
       .filter((b) => {
-        const d = new Date(b.actual_return_date!);
+        const d = new Date(b.start_date);
         return d.getMonth() === month && d.getFullYear() === year;
       })
       .map((b) => {
@@ -149,8 +147,8 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
       })
       .filter((item) => item.percent > 0);
 
-    const yearCommissions = completedBookings
-      .filter((b) => new Date(b.actual_return_date!).getFullYear() === year)
+    const yearCommissions = bookings
+      .filter((b) => new Date(b.start_date).getFullYear() === year)
       .map((b) => {
         const car = cars.find((c) => c.id === b.car_id);
         const percent = car?.commission_percent ?? 0;
@@ -1038,7 +1036,7 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
                       </div>
                     )}
                     <div className="flex items-center justify-between border-t border-amber-200 pt-1">
-                      <span className="text-xs text-slate-400">{formatTanggal(item.booking.actual_return_date!)}</span>
+                      <span className="text-xs text-slate-400">{formatTanggal(item.booking.actual_return_date ?? item.booking.start_date)}</span>
                       <span className="text-sm font-bold text-amber-800">{formatRupiah(item.commissionAmount)}</span>
                     </div>
                   </div>
@@ -1092,7 +1090,7 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
                               {item.car?.brand} {item.car?.model}
                             </td>
                             <td className="px-4 py-3 text-xs text-slate-500">
-                              {formatTanggal(item.booking.actual_return_date!)}
+                              {formatTanggal(item.booking.actual_return_date ?? item.booking.start_date)}
                             </td>
                             <td className="px-4 py-3 text-right">
                               {formatRupiah(item.totalSewa)}
