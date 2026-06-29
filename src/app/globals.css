@@ -75,12 +75,12 @@ body {
   #nota-print-area {
     display: block !important;
     position: static !important;
-    width: 72mm !important;
-    max-width: 72mm !important;
-    margin: 0 auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
     background: white !important;
-    padding: 2mm !important;
-    font-size: 10px !important;
+    padding: 0 1mm !important;
+    font-size: 11px !important;
     line-height: 1.4 !important;
     color: #000 !important;
     overflow: visible !important;
@@ -146,7 +146,7 @@ body {
 
   @page {
     size: 80mm auto;
-    margin: 2mm;
+    margin: 0;
   }
 }
 
