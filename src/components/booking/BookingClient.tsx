@@ -1125,7 +1125,7 @@ export function BookingClient({
                       padding: 2mm !important;
                       background: white !important;
                       overflow: visible !important;
-                      page-break-inside: avoid !important;
+                      font-size: 10px !important;
                     }
                   </style>
                 </head>

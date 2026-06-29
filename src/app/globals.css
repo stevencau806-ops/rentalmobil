@@ -80,11 +80,10 @@ body {
     margin: 0 auto !important;
     background: white !important;
     padding: 2mm !important;
-    font-size: 9px !important;
+    font-size: 10px !important;
     line-height: 1.3 !important;
     color: #000 !important;
     overflow: visible !important;
-    page-break-inside: avoid !important;
   }
   #nota-print-area * {
     color: #000 !important;
