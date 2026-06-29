@@ -278,7 +278,7 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
 
     // Commission calculation for this car
     const commissionPercent = car.commission_percent ?? 0;
-    const commissionBookings = carBookings.filter((b) => b.actual_return_date);
+    const commissionBookings = carBookings;
     const commissionDetails = commissionBookings.map((b) => {
       const totalSewa = Number(b.total_cost);
       let totalDenda = Number(b.late_fee || 0);
@@ -1160,9 +1160,8 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
                 .reduce((s, e) => s + Number(e.amount), 0);
               // Commission calculation
               const commPercent = car.commission_percent ?? 0;
-              const completedCarBookings = carBookings.filter((b) => b.actual_return_date);
               const carCommission = commPercent > 0
-                ? completedCarBookings.reduce((s, b) => {
+                ? carBookings.reduce((s, b) => {
                     let total = Number(b.total_cost) + Number(b.late_fee || 0);
                     if (b.additional_fines) { try { total += (JSON.parse(b.additional_fines) as { amount: number }[]).reduce((x, f) => x + (f.amount || 0), 0); } catch {} }
                     return s + Math.round(total * commPercent / 100);
@@ -1470,9 +1469,8 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
           const carRevenue = carBookings.reduce((s, b) => s + Number(b.total_cost) + Number(b.late_fee || 0), 0);
           const carExpTotal = carExpensesList.reduce((s, e) => s + Number(e.amount), 0);
           const commPercent = car.commission_percent ?? 0;
-          const completedBookings = carBookings.filter((b) => b.actual_return_date);
           const totalCommission = commPercent > 0
-            ? completedBookings.reduce((s, b) => {
+            ? carBookings.reduce((s, b) => {
                 let total = Number(b.total_cost) + Number(b.late_fee || 0);
                 if (b.additional_fines) { try { total += (JSON.parse(b.additional_fines) as { amount: number }[]).reduce((x, f) => x + (f.amount || 0), 0); } catch {} }
                 return s + Math.round(total * commPercent / 100);
@@ -1509,7 +1507,7 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
                       <div className="rounded-xl bg-violet-50 border border-violet-200 p-3">
                         <p className="text-[10px] font-bold uppercase text-violet-700">Potongan Admin {commPercent}%</p>
                         <p className="text-lg font-bold text-violet-800">{formatRupiah(totalCommission)}</p>
-                        <p className="text-[10px] text-violet-600">{completedBookings.length} booking</p>
+                        <p className="text-[10px] text-violet-600">{carBookings.length} booking</p>
                       </div>
                     )}
                     {totalDenda > 0 && (
