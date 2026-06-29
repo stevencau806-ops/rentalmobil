@@ -1116,7 +1116,7 @@ export function BookingClient({
                   ${linkStyles}
                   ${inlineStyles}
                   <style>
-                    @page { size: 80mm auto; margin: 0; }
+                    @page { size: 80mm auto; margin: 2mm; }
                     body { background: white !important; margin: 0 !important; padding: 0 !important; }
                     #nota-print-area {
                       width: 72mm !important;
@@ -1126,7 +1126,6 @@ export function BookingClient({
                       background: white !important;
                       overflow: visible !important;
                       page-break-inside: avoid !important;
-                      font-size: 11px !important;
                     }
                   </style>
                 </head>

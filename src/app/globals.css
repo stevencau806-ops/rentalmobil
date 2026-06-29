@@ -80,47 +80,19 @@ body {
     margin: 0 auto !important;
     background: white !important;
     padding: 2mm !important;
-    font-size: 11px !important;
-    line-height: 1.4 !important;
+    font-size: 9px !important;
+    line-height: 1.3 !important;
     color: #000 !important;
     overflow: visible !important;
     page-break-inside: avoid !important;
-    -webkit-font-smoothing: none !important;
-    -moz-osx-font-smoothing: unset !important;
-    text-shadow: none !important;
-    letter-spacing: 0 !important;
   }
   #nota-print-area * {
     color: #000 !important;
-    text-shadow: none !important;
-    -webkit-font-smoothing: none !important;
-  }
-  /* Cap font weight to 600 for thermal */
-  #nota-print-area .font-bold,
-  #nota-print-area .font-black,
-  #nota-print-area .font-extrabold {
-    font-weight: 600 !important;
-  }
-  #nota-print-area .font-semibold {
-    font-weight: 600 !important;
   }
   #nota-print-area img {
     width: auto !important;
     max-height: 3.5rem !important;
     height: auto !important;
-  }
-  /* Consistent section spacing */
-  #nota-print-area .nota-section {
-    margin-bottom: 2mm !important;
-  }
-  /* Dashed divider between sections */
-  #nota-print-area .nota-divider {
-    border-bottom: 1px dashed #000 !important;
-    margin: 2mm 0 !important;
-  }
-  /* Ketentuan list - more readable line height */
-  #nota-print-area .nota-terms {
-    line-height: 1.5 !important;
   }
 
   /* ===== REPORT PRINT (Laporan page) ===== */
@@ -145,7 +117,7 @@ body {
 
   @page {
     size: 80mm auto;
-    margin: 0;
+    margin: 2mm;
   }
 }
 
