@@ -1116,8 +1116,8 @@ export function BookingClient({
                   ${linkStyles}
                   ${inlineStyles}
                   <style>
-                    @page { size: 80mm auto; margin: 2mm; }
-                    body { background: white !important; margin: 0 !important; padding: 0 !important; }
+                    @page { size: 80mm 297mm; margin: 0mm; }
+                    body { background: white !important; margin: 0 !important; padding: 0 !important; width: 80mm !important; }
                     #nota-print-area {
                       width: 72mm !important;
                       max-width: 72mm !important;

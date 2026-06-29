@@ -115,8 +115,8 @@ body {
   }
 
   @page {
-    size: 80mm auto;
-    margin: 2mm;
+    size: 80mm 297mm;
+    margin: 0mm;
   }
 }
 
