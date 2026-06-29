@@ -1122,7 +1122,7 @@ export function BookingClient({
                       width: 72mm !important;
                       max-width: 72mm !important;
                       margin: 0 auto !important;
-                      padding: 1mm !important;
+                      padding: 2mm !important;
                       background: white !important;
                       overflow: visible !important;
                       page-break-inside: avoid !important;
