@@ -1158,7 +1158,17 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
                   return e.car_id === car.id && d.getMonth() === month && d.getFullYear() === year;
                 })
                 .reduce((s, e) => s + Number(e.amount), 0);
-              const carProfit = carRevenue - carExpenses;
+              // Commission calculation
+              const commPercent = car.commission_percent ?? 0;
+              const completedCarBookings = carBookings.filter((b) => b.actual_return_date);
+              const carCommission = commPercent > 0
+                ? completedCarBookings.reduce((s, b) => {
+                    let total = Number(b.total_cost) + Number(b.late_fee || 0);
+                    if (b.additional_fines) { try { total += (JSON.parse(b.additional_fines) as { amount: number }[]).reduce((x, f) => x + (f.amount || 0), 0); } catch {} }
+                    return s + Math.round(total * commPercent / 100);
+                  }, 0)
+                : 0;
+              const carProfit = carRevenue - carExpenses - carCommission;
               const colors = [
                 "from-blue-500 to-blue-600",
                 "from-emerald-500 to-emerald-600",
@@ -1191,6 +1201,12 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
                       <span className="opacity-80">Pengeluaran</span>
                       <span className="font-bold">{formatRupiah(carExpenses)}</span>
                     </div>
+                    {carCommission > 0 && (
+                      <div className="flex justify-between">
+                        <span className="opacity-80">Admin {commPercent}%</span>
+                        <span className="font-bold">{formatRupiah(carCommission)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between border-t border-white/30 pt-1">
                       <span className="font-semibold">Laba/Rugi</span>
                       <span className="font-bold">{formatRupiah(carProfit)}</span>
