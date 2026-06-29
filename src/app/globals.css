@@ -75,17 +75,16 @@ body {
   #nota-print-area {
     display: block !important;
     position: static !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    margin: 0 !important;
+    width: 72mm !important;
+    max-width: 72mm !important;
+    margin: 0 auto !important;
     background: white !important;
-    padding: 0 1mm !important;
+    padding: 1mm !important;
     font-size: 11px !important;
     line-height: 1.4 !important;
     color: #000 !important;
     overflow: visible !important;
     page-break-inside: avoid !important;
-    /* Prevent text doubling on thermal */
     -webkit-font-smoothing: none !important;
     -moz-osx-font-smoothing: unset !important;
     text-shadow: none !important;
