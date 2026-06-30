@@ -75,11 +75,11 @@ body {
   #nota-print-area {
     display: block !important;
     position: static !important;
-    width: 72mm !important;
-    max-width: 72mm !important;
+    width: 76mm !important;
+    max-width: 76mm !important;
     margin: 0 auto !important;
     background: white !important;
-    padding: 2mm !important;
+    padding: 0 !important;
     font-size: 10px !important;
     line-height: 1.3 !important;
     color: #000 !important;
