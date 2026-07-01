@@ -13,6 +13,7 @@ import { Input, Textarea, Select } from "@/components/ui/Input";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
 import { Nota } from "./Nota";
+import { NotaThermal } from "./NotaThermal";
 import {
   formatRupiah,
   formatTanggal,
@@ -490,7 +491,16 @@ export function BookingClient({
 
       {/* Nota Modal */}
       <Modal open={!!notaBooking} onClose={() => setNotaBooking(null)} title="Nota Sewa" size="lg">
-        {notaBooking && <Nota booking={notaBooking} />}
+        {notaBooking && (
+          <>
+            <div className="no-print">
+              <Nota booking={notaBooking} />
+            </div>
+            <div className="print-only">
+              <NotaThermal booking={notaBooking} />
+            </div>
+          </>
+        )}
         {notaBooking && (
           <div className="mt-4 flex justify-end gap-2 no-print">
             <Button variant="outline" onClick={() => setNotaBooking(null)}>

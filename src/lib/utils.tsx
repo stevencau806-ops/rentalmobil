@@ -1,4 +1,5 @@
 import type { ExpenseType, FineStatus, PaymentStatus } from "@/lib/types";
+import { Wrench, Receipt, Droplets, Package } from "lucide-react";
 
 /** Format number as Indonesian Rupiah currency. */
 export function formatRupiah(amount: number): string {
@@ -92,11 +93,24 @@ export const expenseTypeLabel: Record<ExpenseType, string> = {
 };
 
 export const expenseTypeIcon: Record<ExpenseType, string> = {
-  service: "🔧",
-  tax: "🧾",
-  oil: "🛢️",
-  other: "📦",
+  service: "wrench",
+  tax: "receipt",
+  oil: "droplets",
+  other: "package",
 };
+
+/** Lucide icon component for expense types. */
+const expenseIcons: Record<ExpenseType, React.ComponentType<{ className?: string }>> = {
+  service: Wrench,
+  tax: Receipt,
+  oil: Droplets,
+  other: Package,
+};
+
+export function ExpenseTypeIcon({ type }: { type: ExpenseType }) {
+  const Icon = expenseIcons[type];
+  return <Icon className="h-4 w-4" />;
+}
 
 /** Generate a simple booking code, e.g. RNT-20260620-A1B2. */
 export function generateBookingCode(id: string): string {
