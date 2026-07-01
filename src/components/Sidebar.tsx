@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import { Logo } from "./Logo";
+import { LogoutButton } from "./LogoutButton";
 
 interface NavItem {
   href: string;
@@ -49,6 +50,11 @@ const navItems: NavItem[] = [
     icon: <Icon path="M3 3v18h18M7 14l4-4 3 3 5-6" />,
   },
   {
+    href: "/qris",
+    label: "QRIS",
+    icon: <Icon path="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM17 14v3h3M14 14h3v7" />,
+  },
+  {
     href: "/pengaturan",
     label: "Pengaturan",
     icon: <Icon path="M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z" />,
@@ -75,6 +81,29 @@ function Icon({ path }: { path: string }) {
 export function Sidebar({ userEmail }: { userEmail?: string | null }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [drawerVisible, setDrawerVisible] = useState(false);
+
+  // Animate drawer in
+  useEffect(() => {
+    if (mobileOpen) {
+      // Small delay to trigger CSS transition
+      requestAnimationFrame(() => setDrawerVisible(true));
+    }
+  }, [mobileOpen]);
+
+  function closeDrawer() {
+    setDrawerVisible(false);
+    // Wait for animation to finish before unmounting
+    setTimeout(() => setMobileOpen(false), 300);
+  }
+
+  // Close drawer on navigation (route change)
+  useEffect(() => {
+    if (mobileOpen) {
+      closeDrawer();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`);
@@ -83,7 +112,13 @@ export function Sidebar({ userEmail }: { userEmail?: string | null }) {
     <>
       {/* Mobile top bar with hamburger */}
       <div className="no-print sticky top-0 z-30 flex items-center justify-between border-b border-brand-800 bg-brand-900 px-4 py-2.5 text-white md:hidden">
-        <Logo size={40} variant="light" />
+        <div className="flex items-center gap-2">
+          <Logo size={36} variant="light" />
+          <div>
+            <p className="text-sm font-bold leading-tight">Erlangga</p>
+            <p className="text-[10px] font-medium text-brand-200">Rental Mobil</p>
+          </div>
+        </div>
         <button
           onClick={() => setMobileOpen(true)}
           aria-label="Buka menu"
@@ -97,30 +132,79 @@ export function Sidebar({ userEmail }: { userEmail?: string | null }) {
         </button>
       </div>
 
-      {/* Mobile overlay drawer */}
+      {/* Mobile drawer overlay */}
       {mobileOpen && (
         <div className="no-print fixed inset-0 z-50 md:hidden">
-          <div className="absolute inset-0 bg-slate-900/50" onClick={() => setMobileOpen(false)} />
-          <div className="absolute left-0 top-0 h-full w-72 max-w-[80%] overflow-y-auto bg-brand-900 text-white shadow-xl">
+          {/* Backdrop */}
+          <div
+            className={`absolute inset-0 bg-black/50 transition-opacity duration-300 ${
+              drawerVisible ? "opacity-100" : "opacity-0"
+            }`}
+            onClick={closeDrawer}
+          />
+          {/* Drawer panel */}
+          <div
+            className={`absolute left-0 top-0 flex h-full w-72 max-w-[80%] flex-col bg-brand-900 text-white shadow-2xl transition-transform duration-300 ease-in-out ${
+              drawerVisible ? "translate-x-0" : "-translate-x-full"
+            }`}
+          >
+            {/* Drawer header */}
             <div className="flex items-center justify-between border-b border-brand-800 px-4 py-4">
-              <Logo size={44} variant="light" />
-              <button onClick={() => setMobileOpen(false)} className="rounded-md p-1 hover:bg-brand-800" aria-label="Tutup menu">
+              <div className="flex items-center gap-2">
+                <Logo size={40} variant="light" />
+                <div>
+                  <p className="text-base font-bold leading-tight">Erlangga</p>
+                  <p className="text-xs font-medium text-brand-200">Rental Mobil</p>
+                </div>
+              </div>
+              <button onClick={closeDrawer} className="rounded-md p-1.5 hover:bg-brand-800" aria-label="Tutup menu">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                   <line x1="18" y1="6" x2="6" y2="18" />
                   <line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
               </button>
             </div>
-            <NavList items={navItems} isActive={isActive} onNavigate={() => setMobileOpen(false)} />
-            <UserFooter userEmail={userEmail} />
+
+            {/* Navigation */}
+            <nav className="flex-1 space-y-1 px-3 py-4">
+              {navItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={closeDrawer}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                    isActive(item.href)
+                      ? "bg-brand-700 text-white shadow-sm"
+                      : "text-brand-100 hover:bg-brand-800 hover:text-white"
+                  }`}
+                >
+                  <span className="shrink-0">{item.icon}</span>
+                  <span>{item.label}</span>
+                </Link>
+              ))}
+            </nav>
+
+            {/* User footer with logout */}
+            <div className="border-t border-brand-800 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-700 text-sm font-semibold text-white">
+                  {(userEmail?.[0] ?? "A").toUpperCase()}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm text-white">{userEmail ?? "admin"}</p>
+                  <p className="text-xs text-brand-300">Administrator</p>
+                </div>
+              </div>
+              <LogoutButton className="mt-3 w-full justify-center rounded-lg bg-brand-800 py-2.5 text-sm font-medium text-white" />
+            </div>
           </div>
         </div>
       )}
 
       {/* Desktop sidebar */}
       <aside className="no-print fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-brand-900 text-white md:flex">
-        <div className="border-b border-brand-800 px-5 py-5">
-          <Logo size={140} variant="light" />
+        <div className="border-b border-brand-800 px-5 py-4">
+          <Logo size={50} variant="light" showText />
         </div>
         <NavList items={navItems} isActive={isActive} />
         <UserFooter userEmail={userEmail} />
@@ -139,20 +223,20 @@ function NavList({
   onNavigate?: () => void;
 }) {
   return (
-    <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+    <nav className="flex-1 space-y-0.5 px-3 py-3">
       {items.map((item) => (
         <Link
           key={item.href}
           href={item.href}
           onClick={onNavigate}
-          className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+          className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
             isActive(item.href)
               ? "bg-brand-700 text-white shadow-sm"
               : "text-brand-100 hover:bg-brand-800 hover:text-white"
           }`}
         >
           <span className="shrink-0">{item.icon}</span>
-          {item.label}
+          <span>{item.label}</span>
         </Link>
       ))}
     </nav>
@@ -161,16 +245,17 @@ function NavList({
 
 function UserFooter({ userEmail }: { userEmail?: string | null }) {
   return (
-    <div className="border-t border-brand-800 px-4 py-3">
+    <div className="border-t border-brand-800 px-4 py-2.5">
       <div className="flex items-center gap-2 text-xs text-brand-200">
-        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-700 text-sm font-semibold text-white">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-700 text-sm font-semibold text-white">
           {(userEmail?.[0] ?? "A").toUpperCase()}
         </span>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="truncate text-white">{userEmail ?? "admin"}</p>
           <p className="text-brand-300">Administrator</p>
         </div>
       </div>
+      <LogoutButton className="mt-2 w-full justify-center rounded-lg bg-brand-800 py-2 text-sm font-medium text-white" />
     </div>
   );
 }

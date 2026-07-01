@@ -1,0 +1,257 @@
+import { NextRequest, NextResponse } from "next/server";
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const imageUrl = body.url as string | undefined;
+
+    if (!imageUrl) {
+      return NextResponse.json({ error: "URL gambar tidak ditemukan" }, { status: 400 });
+    }
+
+    const apiKey = process.env.OCR_SPACE_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: "OCR API key belum dikonfigurasi" },
+        { status: 500 }
+      );
+    }
+
+    // Transform Cloudinary URL to get compressed version (max width 1200px, quality 80, <1MB)
+    const compressedUrl = getCompressedCloudinaryUrl(imageUrl);
+    console.log("OCR using URL:", compressedUrl);
+
+    // Send compressed URL to OCR.space
+    const ocrForm = new URLSearchParams();
+    ocrForm.append("url", compressedUrl);
+    ocrForm.append("language", "eng");
+    ocrForm.append("isOverlayRequired", "false");
+    ocrForm.append("OCREngine", "2");
+    ocrForm.append("scale", "true");
+    ocrForm.append("isTable", "true");
+
+    const ocrRes = await fetch("https://api.ocr.space/parse/image", {
+      method: "POST",
+      headers: {
+        apikey: apiKey,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: ocrForm.toString(),
+    });
+
+    if (!ocrRes.ok) {
+      const errText = await ocrRes.text();
+      console.error("OCR.space HTTP error:", ocrRes.status, errText);
+      return NextResponse.json(
+        { error: `OCR gagal (${ocrRes.status})` },
+        { status: 500 }
+      );
+    }
+
+    const ocrData = await ocrRes.json();
+    console.log("OCR.space response:", JSON.stringify(ocrData).slice(0, 500));
+
+    if (ocrData.IsErroredOnProcessing) {
+      const errMsg = ocrData.ErrorMessage || ocrData.ErrorDetails || "Unknown error";
+      console.error("OCR.space processing error:", errMsg);
+      return NextResponse.json(
+        { error: `Gagal memproses foto: ${errMsg}` },
+        { status: 500 }
+      );
+    }
+
+    const fullText = ocrData.ParsedResults?.[0]?.ParsedText || "";
+    console.log("OCR text result:", fullText);
+
+    if (!fullText.trim()) {
+      return NextResponse.json(
+        { error: "Tidak ada teks yang terdeteksi di foto" },
+        { status: 400 }
+      );
+    }
+
+    // Parse KTP data from OCR text
+    const result = parseKtpText(fullText);
+
+    return NextResponse.json(result);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("OCR KTP error:", msg);
+    return NextResponse.json(
+      { error: `Terjadi kesalahan: ${msg}` },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * Transform Cloudinary URL to add compression:
+ * - Resize to max 1200px width
+ * - Quality 80
+ * - Format JPEG (smaller)
+ * 
+ * Input:  https://res.cloudinary.com/xxx/image/upload/v123/ktp/abc.jpg
+ * Output: https://res.cloudinary.com/xxx/image/upload/w_1200,q_80,f_jpg/v123/ktp/abc.jpg
+ */
+function getCompressedCloudinaryUrl(url: string): string {
+  // Cloudinary URL pattern: .../image/upload/[optional_transforms/]v1234/folder/file.ext
+  const uploadIndex = url.indexOf("/image/upload/");
+  if (uploadIndex === -1) return url; // Not a Cloudinary URL, return as-is
+
+  const base = url.slice(0, uploadIndex + "/image/upload/".length);
+  const rest = url.slice(uploadIndex + "/image/upload/".length);
+
+  // Add transforms: resize + quality + format
+  return `${base}w_1200,q_80,f_jpg/${rest}`;
+}
+
+function parseKtpText(text: string): { nik: string; nama: string; alamat: string } {
+  const lines = text.split(/[\n\r]+/).map((l) => l.trim()).filter(Boolean);
+  console.log("Parsed lines:", lines);
+
+  // Extract NIK (16 digits) - more tolerant
+  let nik = "";
+  for (const line of lines) {
+    // Direct 16 digit match
+    const nikMatch = line.match(/(\d{16})/);
+    if (nikMatch) {
+      nik = nikMatch[1];
+      break;
+    }
+    // Digits with spaces/dots/dashes (common OCR artifacts)
+    const cleaned = line.replace(/[\s.\-,O]/g, (m) => m === "O" ? "0" : ""); // OCR often reads 0 as O
+    const digitsOnly = cleaned.replace(/[^0-9]/g, "");
+    if (digitsOnly.length >= 16 && /NIK|^\d/.test(line)) {
+      nik = digitsOnly.slice(0, 16);
+      break;
+    }
+    // Line with "NIK" label followed by digits on same or next line
+    if (/NIK/i.test(line)) {
+      const afterNik = line.replace(/.*NIK\s*[:\-.]?\s*/i, "").replace(/[\s.\-]/g, "");
+      const nikDigits = afterNik.replace(/[^0-9]/g, "");
+      if (nikDigits.length >= 16) {
+        nik = nikDigits.slice(0, 16);
+        break;
+      }
+    }
+  }
+  // Second pass: if no NIK found, look for any 16-digit sequence anywhere
+  if (!nik) {
+    for (const line of lines) {
+      const allDigits = line.replace(/[^0-9]/g, "");
+      if (allDigits.length === 16) {
+        nik = allDigits;
+        break;
+      }
+    }
+  }
+
+  // Extract Nama - more tolerant matching
+  let nama = "";
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    // Match: "Nama : BUDI", "Nama: BUDI", "Nama - BUDI", "Nama BUDI", "Narna : BUDI"
+    const namaMatch = line.match(/N[ao]m[ao]\s*[:\-.]?\s*(.+)/i);
+    if (namaMatch && !/tempat|lahir|Ibu|Ayah/i.test(namaMatch[1])) {
+      const candidate = namaMatch[1].trim();
+      // Must have at least 2 letters to be a valid name
+      if (candidate.replace(/[^A-Za-z]/g, "").length >= 2) {
+        nama = candidate;
+        break;
+      }
+    }
+    // Fallback: line right after a line that contains just "Nama" or similar
+    if (/^N[ao]m[ao]\s*[:\-.]?\s*$/i.test(line) && i + 1 < lines.length) {
+      const nextLine = lines[i + 1].trim();
+      if (nextLine.replace(/[^A-Za-z]/g, "").length >= 2 && !/^(Tempat|NIK|Jenis)/i.test(nextLine)) {
+        nama = nextLine;
+        break;
+      }
+    }
+  }
+
+  // Clean nama
+  nama = nama.replace(/[^A-Za-z\s.',-]/g, "").replace(/\s+/g, " ").trim();
+
+  // Extract Provinsi & Kabupaten/Kota from header (usually first 2 lines of KTP)
+  let provinsi = "";
+  let kabupaten = "";
+
+  for (const line of lines) {
+    // "PROVINSI JAWA BARAT" or "PROP. JAWA BARAT"
+    const provMatch = line.match(/PROP(?:INSI)?\s*[.:]?\s*(.+)/i);
+    if (provMatch && !provinsi) {
+      provinsi = provMatch[1].trim();
+      continue;
+    }
+    // "KABUPATEN SUMEDANG" or "KOTA BANDUNG" or "KAB. SUMEDANG"
+    const kabMatch = line.match(/(?:KABUPATEN|KAB|KOTA)\s*[.:]?\s*(.+)/i);
+    if (kabMatch && !kabupaten) {
+      kabupaten = kabMatch[1].trim();
+      continue;
+    }
+    // Sometimes header just has the name without prefix - detect from position
+    // First line often: "PROVINSI JAWA BARAT"
+    // Second line often: "KABUPATEN SUMEDANG"
+  }
+
+  // Extract address fields
+  let alamat = "";
+  let rtRw = "";
+  let kelDesa = "";
+  let kecamatan = "";
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Alamat
+    const alamatMatch = line.match(/Alamat\s*[:\-]\s*(.+)/i);
+    if (alamatMatch && !alamat) {
+      alamat = alamatMatch[1].trim();
+      // Check if next line continues address (not a label)
+      if (i + 1 < lines.length) {
+        const next = lines[i + 1];
+        if (!/^(RT|Kel|Kec|Agama|Status|Pekerjaan|Kewarganegaraan)/i.test(next)) {
+          alamat += " " + next.trim();
+        }
+      }
+    }
+
+    // RT/RW - multiple patterns
+    if (!rtRw) {
+      const rtMatch = line.match(/RT\s*[\/\\]?\s*RW\s*[:\-]?\s*(.+)/i);
+      if (rtMatch) rtRw = rtMatch[1].trim();
+      // Also try: "026/008" on its own line after RT/RW label
+      const rtMatch2 = line.match(/^(\d{3})\s*[\/\\]\s*(\d{3})$/);
+      if (rtMatch2) rtRw = `${rtMatch2[1]}/${rtMatch2[2]}`;
+    }
+
+    // Kel/Desa - multiple patterns
+    if (!kelDesa) {
+      const kelMatch = line.match(/Kel(?:urahan)?\s*[\/\\]?\s*Desa\s*[:\-]?\s*(.+)/i);
+      if (kelMatch) kelDesa = kelMatch[1].trim();
+      // Alternative: "Kel. LEGOK KIDUL" or "Desa LEGOK KIDUL"
+      const kelMatch2 = line.match(/(?:^Kel\.?|^Desa)\s*[:\-]?\s*(.+)/i);
+      if (kelMatch2 && !kelDesa) kelDesa = kelMatch2[1].trim();
+    }
+
+    // Kecamatan
+    if (!kecamatan) {
+      const kecMatch = line.match(/Kec(?:amatan)?\s*[.:\-]?\s*(.+)/i);
+      if (kecMatch) kecamatan = kecMatch[1].trim();
+    }
+  }
+
+  // Build full address with all parts
+  const addressParts: string[] = [];
+  if (alamat) addressParts.push(alamat);
+  if (rtRw) addressParts.push(`RT/RW ${rtRw}`);
+  if (kelDesa) addressParts.push(`Kel. ${kelDesa}`);
+  if (kecamatan) addressParts.push(`Kec. ${kecamatan}`);
+  if (kabupaten) addressParts.push(kabupaten.includes("KOTA") ? kabupaten : `Kab. ${kabupaten}`);
+  if (provinsi) addressParts.push(`Prov. ${provinsi}`);
+
+  const fullAddress = addressParts.join(", ");
+
+  return { nik, nama, alamat: fullAddress };
+}

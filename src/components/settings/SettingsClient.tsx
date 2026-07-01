@@ -1,16 +1,30 @@
 "use client";
 
 import { useState } from "react";
-import { Settings as SettingsIcon, UserCircle, Lightbulb } from "lucide-react";
-import type { Settings } from "@/lib/types";
+import { Settings as SettingsIcon, UserCircle, Lightbulb, FileText, PenLine, Plus, Trash2, GripVertical, QrCode } from "lucide-react";
+import type { Settings, FineType, ExpenseCategory } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
-import { Input } from "@/components/ui/Input";
+import { Input, Textarea } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { useToast } from "@/components/ui/Toast";
 import { formatRupiah } from "@/lib/utils";
 import { LogoutButton } from "@/components/LogoutButton";
+
+const DEFAULT_TERMS = [
+  "Kendaraan (Mobil) yang disewakan tidak dapat dipindah tangankan kepada pihak lain/ketiga tanpa seizin pemilik kendaraan.",
+  "Kendaraan (Mobil) tidak dapat dijadikan jaminan/digadaikan dengan tujuan kepada siapapun.",
+  "Pelanggaran no 1 & no 2 akan diproses melalui jalur hukum.",
+  "Perubahan rute wajib konfirmasi ke pemilik mobil.",
+  "Bersedia mengembalikan kendaraan (Mobil) seperti saat diambil.",
+  "Bersedia mengembalikan bahan bakar sesuai balok seperti saat diambil.",
+  "Kerusakan, body lecet dan kecelakaan kendaraan (Mobil) dalam masa pinjaman ditanggung penyewa.",
+  "Dilarang membawa atau untuk bertransaksi barang haram/narkoba selama masa pinjaman kendaraan (Mobil).",
+  "Denda keterlambatan Rp40.000/jam.",
+];
+
+const DEFAULT_SIGNATURES = { left: "Penyewa", right: "Pemilik" };
 
 interface AdminInfo {
   id: string;
@@ -24,10 +38,78 @@ interface SettingsClientProps {
   currentUserId: string;
 }
 
+function parseTerms(raw: string | null | undefined): string[] {
+  if (!raw) return DEFAULT_TERMS;
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    return DEFAULT_TERMS;
+  } catch {
+    return DEFAULT_TERMS;
+  }
+}
+
+function parseSignatures(raw: string | null | undefined): { left: string; right: string } {
+  if (!raw) return DEFAULT_SIGNATURES;
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed.left === "string") return parsed;
+    return DEFAULT_SIGNATURES;
+  } catch {
+    return DEFAULT_SIGNATURES;
+  }
+}
+
 export function SettingsClient({ settings, admins, currentUserId }: SettingsClientProps) {
   const [appName, setAppName] = useState(settings?.app_name ?? "Erlangga Rental Mobil");
+  const [phone, setPhone] = useState(settings?.phone ?? "");
   const [finePerHour, setFinePerHour] = useState(settings?.fine_per_hour?.toString() ?? "25000");
   const [saving, setSaving] = useState(false);
+
+  // Nota terms
+  const [terms, setTerms] = useState<string[]>(parseTerms(settings?.nota_terms));
+  const [savingTerms, setSavingTerms] = useState(false);
+
+  // Nota signatures
+  const [signatures, setSignatures] = useState(parseSignatures(settings?.nota_signatures));
+  const [savingSignatures, setSavingSignatures] = useState(false);
+
+  // QRIS
+  const [qrisUrl, setQrisUrl] = useState(settings?.qris_url ?? "");
+  const [savingQris, setSavingQris] = useState(false);
+
+  // Fine types
+  const DEFAULT_FINE_TYPES: FineType[] = [
+    { key: "bbm", label: "Bahan Bakar", emoji: "⛽" },
+    { key: "kerusakan", label: "Kerusakan", emoji: "🔧" },
+    { key: "lainnya", label: "Lainnya", emoji: "📋" },
+  ];
+  const [fineTypes, setFineTypes] = useState<FineType[]>(() => {
+    if (!settings?.fine_types) return DEFAULT_FINE_TYPES;
+    try {
+      const parsed = JSON.parse(settings.fine_types);
+      return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_FINE_TYPES;
+    } catch { return DEFAULT_FINE_TYPES; }
+  });
+  const [savingFineTypes, setSavingFineTypes] = useState(false);
+
+  // Expense categories
+  const DEFAULT_EXPENSE_TYPES: ExpenseCategory[] = [
+    { key: "service", label: "Servis Mobil", emoji: "🔧" },
+    { key: "tax", label: "Pajak Kendaraan", emoji: "🧾" },
+    { key: "oil", label: "Ganti Oli", emoji: "🛢️" },
+    { key: "commission", label: "Komisi", emoji: "💰" },
+    { key: "other", label: "Lainnya", emoji: "📦" },
+  ];
+  const [expenseTypes, setExpenseTypes] = useState<ExpenseCategory[]>(() => {
+    if (!settings?.expense_types) return DEFAULT_EXPENSE_TYPES;
+    try {
+      const parsed = JSON.parse(settings.expense_types);
+      return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_EXPENSE_TYPES;
+    } catch { return DEFAULT_EXPENSE_TYPES; }
+  });
+  const [savingExpenseTypes, setSavingExpenseTypes] = useState(false);
+
   const toast = useToast();
 
   async function handleSave(e: React.FormEvent) {
@@ -36,6 +118,7 @@ export function SettingsClient({ settings, admins, currentUserId }: SettingsClie
     const supabase = createClient();
     const payload = {
       app_name: appName.trim(),
+      phone: phone.trim() || null,
       fine_per_hour: Number(finePerHour) || 0,
     };
 
@@ -52,6 +135,147 @@ export function SettingsClient({ settings, admins, currentUserId }: SettingsClie
       return;
     }
     toast("Pengaturan disimpan", "success");
+  }
+
+  async function handleSaveTerms(e: React.FormEvent) {
+    e.preventDefault();
+    const filtered = terms.filter((t) => t.trim() !== "");
+    if (filtered.length === 0) {
+      toast("Minimal 1 pasal harus diisi", "error");
+      return;
+    }
+    setSavingTerms(true);
+    const supabase = createClient();
+    const payload = { nota_terms: JSON.stringify(filtered) };
+
+    let error;
+    if (settings?.id) {
+      ({ error } = await supabase.from("settings").update(payload).eq("id", settings.id));
+    } else {
+      ({ error } = await supabase.from("settings").insert({ ...payload, app_name: appName, fine_per_hour: Number(finePerHour) || 0 }));
+    }
+
+    setSavingTerms(false);
+    if (error) {
+      toast(`Gagal: ${error.message}`, "error");
+      return;
+    }
+    setTerms(filtered);
+    toast("Pasal nota disimpan", "success");
+  }
+
+  async function handleSaveSignatures(e: React.FormEvent) {
+    e.preventDefault();
+    if (!signatures.left.trim() || !signatures.right.trim()) {
+      toast("Nama pihak TTD tidak boleh kosong", "error");
+      return;
+    }
+    setSavingSignatures(true);
+    const supabase = createClient();
+    const payload = { nota_signatures: JSON.stringify(signatures) };
+
+    let error;
+    if (settings?.id) {
+      ({ error } = await supabase.from("settings").update(payload).eq("id", settings.id));
+    } else {
+      ({ error } = await supabase.from("settings").insert({ ...payload, app_name: appName, fine_per_hour: Number(finePerHour) || 0 }));
+    }
+
+    setSavingSignatures(false);
+    if (error) {
+      toast(`Gagal: ${error.message}`, "error");
+      return;
+    }
+    toast("TTD nota disimpan", "success");
+  }
+
+  async function handleSaveQris(e: React.FormEvent) {
+    e.preventDefault();
+    setSavingQris(true);
+    const supabase = createClient();
+    const payload = { qris_url: qrisUrl.trim() || null };
+
+    let error;
+    if (settings?.id) {
+      ({ error } = await supabase.from("settings").update(payload).eq("id", settings.id));
+    } else {
+      ({ error } = await supabase.from("settings").insert({ ...payload, app_name: appName, fine_per_hour: Number(finePerHour) || 0 }));
+    }
+
+    setSavingQris(false);
+    if (error) {
+      toast(`Gagal: ${error.message}`, "error");
+      return;
+    }
+    toast("QRIS disimpan", "success");
+  }
+
+  async function handleSaveFineTypes(e: React.FormEvent) {
+    e.preventDefault();
+    const valid = fineTypes.filter((f) => f.label.trim() && f.key.trim());
+    if (valid.length === 0) {
+      toast("Minimal 1 jenis denda harus diisi", "error");
+      return;
+    }
+    setSavingFineTypes(true);
+    const supabase = createClient();
+    const payload = { fine_types: JSON.stringify(valid) };
+
+    let error;
+    if (settings?.id) {
+      ({ error } = await supabase.from("settings").update(payload).eq("id", settings.id));
+    } else {
+      ({ error } = await supabase.from("settings").insert({ ...payload, app_name: appName, fine_per_hour: Number(finePerHour) || 0 }));
+    }
+
+    setSavingFineTypes(false);
+    if (error) {
+      toast(`Gagal: ${error.message}`, "error");
+      return;
+    }
+    setFineTypes(valid);
+    toast("Jenis denda disimpan", "success");
+  }
+
+  async function handleSaveExpenseTypes(e: React.FormEvent) {
+    e.preventDefault();
+    const valid = expenseTypes.filter((f) => f.label.trim() && f.key.trim());
+    if (valid.length === 0) {
+      toast("Minimal 1 kategori harus diisi", "error");
+      return;
+    }
+    setSavingExpenseTypes(true);
+    const supabase = createClient();
+    const payload = { expense_types: JSON.stringify(valid) };
+
+    let error;
+    if (settings?.id) {
+      ({ error } = await supabase.from("settings").update(payload).eq("id", settings.id));
+    } else {
+      ({ error } = await supabase.from("settings").insert({ ...payload, app_name: appName, fine_per_hour: Number(finePerHour) || 0 }));
+    }
+
+    setSavingExpenseTypes(false);
+    if (error) {
+      toast(`Gagal: ${error.message}`, "error");
+      return;
+    }
+    setExpenseTypes(valid);
+    toast("Kategori pengeluaran disimpan", "success");
+  }
+
+  function updateTerm(index: number, value: string) {
+    const updated = [...terms];
+    updated[index] = value;
+    setTerms(updated);
+  }
+
+  function removeTerm(index: number) {
+    setTerms(terms.filter((_, i) => i !== index));
+  }
+
+  function addTerm() {
+    setTerms([...terms, ""]);
   }
 
   return (
@@ -75,6 +299,12 @@ export function SettingsClient({ settings, admins, currentUserId }: SettingsClie
               placeholder="Erlangga Rental Mobil"
             />
             <Input
+              label="No. Telepon (untuk Nota)"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="0812-0000-0000"
+            />
+            <Input
               label="Denda per Jam Keterlambatan (Rp)"
               type="number"
               value={finePerHour}
@@ -84,6 +314,289 @@ export function SettingsClient({ settings, admins, currentUserId }: SettingsClie
             <div className="flex justify-end">
               <Button type="submit" disabled={saving}>
                 {saving ? "Menyimpan..." : "Simpan Pengaturan"}
+              </Button>
+            </div>
+          </form>
+        </CardBody>
+      </Card>
+
+      {/* Nota Terms / Pasal */}
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <span className="inline-flex items-center gap-2">
+              <FileText className="h-4 w-4 text-brand-600" />
+              Pasal / Ketentuan Nota
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardBody>
+          <form onSubmit={handleSaveTerms} className="space-y-3">
+            <p className="text-xs text-slate-500">
+              Edit pasal-pasal yang tampil di nota sewa. Urutannya sesuai nomor.
+            </p>
+            {terms.map((term, i) => (
+              <div key={i} className="flex items-start gap-2">
+                <span className="mt-2.5 flex h-5 w-5 shrink-0 items-center justify-center rounded bg-slate-100 text-[10px] font-bold text-slate-500">
+                  {i + 1}
+                </span>
+                <Textarea
+                  rows={2}
+                  value={term}
+                  onChange={(e) => updateTerm(i, e.target.value)}
+                  placeholder={`Pasal ${i + 1}...`}
+                  className="flex-1 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeTerm(i)}
+                  className="mt-2 rounded p-1.5 text-red-500 hover:bg-red-50"
+                  title="Hapus pasal"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+            <Button type="button" variant="outline" size="sm" onClick={addTerm}>
+              <span className="inline-flex items-center gap-1">
+                <Plus className="h-3.5 w-3.5" />
+                Tambah Pasal
+              </span>
+            </Button>
+            <div className="flex justify-end pt-2">
+              <Button type="submit" disabled={savingTerms}>
+                {savingTerms ? "Menyimpan..." : "Simpan Pasal"}
+              </Button>
+            </div>
+          </form>
+        </CardBody>
+      </Card>
+
+      {/* Nota Signatures / TTD */}
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <span className="inline-flex items-center gap-2">
+              <PenLine className="h-4 w-4 text-brand-600" />
+              Tanda Tangan Nota
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardBody>
+          <form onSubmit={handleSaveSignatures} className="space-y-4">
+            <p className="text-xs text-slate-500">
+              Nama pihak yang tanda tangan di nota (kiri = penyewa, kanan = pemilik/rental).
+            </p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Input
+                label="Pihak Kiri (Penyewa)"
+                value={signatures.left}
+                onChange={(e) => setSignatures({ ...signatures, left: e.target.value })}
+                placeholder="Penyewa"
+              />
+              <Input
+                label="Pihak Kanan (Pemilik)"
+                value={signatures.right}
+                onChange={(e) => setSignatures({ ...signatures, right: e.target.value })}
+                placeholder="Pemilik"
+              />
+            </div>
+            {/* Preview */}
+            <div className="rounded-lg border border-dashed border-slate-300 p-4">
+              <p className="mb-3 text-center text-[10px] font-semibold uppercase text-slate-400">Preview TTD</p>
+              <div className="flex justify-between px-8">
+                <div className="text-center">
+                  <div className="mb-10 text-xs text-slate-500">{signatures.left || "Penyewa"}</div>
+                  <div className="border-b border-slate-400 w-28" />
+                </div>
+                <div className="text-center">
+                  <div className="mb-10 text-xs text-slate-500">{signatures.right || "Pemilik"}</div>
+                  <div className="border-b border-slate-400 w-28" />
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <Button type="submit" disabled={savingSignatures}>
+                {savingSignatures ? "Menyimpan..." : "Simpan TTD"}
+              </Button>
+            </div>
+          </form>
+        </CardBody>
+      </Card>
+
+      {/* QRIS */}
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <span className="inline-flex items-center gap-2">
+              <QrCode className="h-4 w-4 text-brand-600" />
+              QRIS Pembayaran
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardBody>
+          <form onSubmit={handleSaveQris} className="space-y-4">
+            <p className="text-xs text-slate-500">
+              Masukkan URL gambar QRIS. Gambar akan ditampilkan di Nota agar pelanggan bisa scan untuk bayar.
+            </p>
+            <Input
+              label="URL Gambar QRIS"
+              value={qrisUrl}
+              onChange={(e) => setQrisUrl(e.target.value)}
+              placeholder="https://res.cloudinary.com/... atau URL gambar QRIS lainnya"
+            />
+            {qrisUrl.trim() && (
+              <div className="rounded-lg border border-dashed border-slate-300 p-4">
+                <p className="mb-2 text-center text-[10px] font-semibold uppercase text-slate-400">Preview QRIS</p>
+                <div className="flex justify-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={qrisUrl.trim()}
+                    alt="QRIS Preview"
+                    className="h-48 w-auto rounded-lg border border-slate-200 object-contain"
+                  />
+                </div>
+              </div>
+            )}
+            <div className="flex justify-end">
+              <Button type="submit" disabled={savingQris}>
+                {savingQris ? "Menyimpan..." : "Simpan QRIS"}
+              </Button>
+            </div>
+          </form>
+        </CardBody>
+      </Card>
+
+      {/* Fine Types / Jenis Denda */}
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <span className="inline-flex items-center gap-2">
+              <FileText className="h-4 w-4 text-brand-600" />
+              Jenis Denda
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardBody>
+          <form onSubmit={handleSaveFineTypes} className="space-y-3">
+            <p className="text-xs text-slate-500">
+              Atur jenis-jenis denda yang muncul di dropdown saat selesaikan sewa.
+            </p>
+            {fineTypes.map((ft, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="🔧"
+                  value={ft.emoji}
+                  onChange={(e) => {
+                    const updated = [...fineTypes];
+                    updated[i] = { ...updated[i], emoji: e.target.value };
+                    setFineTypes(updated);
+                  }}
+                  className="w-12 rounded-lg border border-slate-300 px-2 py-2 text-center text-sm"
+                />
+                <input
+                  type="text"
+                  placeholder="Nama jenis denda"
+                  value={ft.label}
+                  onChange={(e) => {
+                    const updated = [...fineTypes];
+                    updated[i] = { ...updated[i], label: e.target.value, key: e.target.value.toLowerCase().replace(/\s+/g, "_") };
+                    setFineTypes(updated);
+                  }}
+                  className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => setFineTypes(fineTypes.filter((_, idx) => idx !== i))}
+                  className="rounded-lg p-2 text-red-500 hover:bg-red-50"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setFineTypes([...fineTypes, { key: "", label: "", emoji: "📋" }])}
+            >
+              <span className="inline-flex items-center gap-1">
+                <Plus className="h-3.5 w-3.5" />
+                Tambah Jenis
+              </span>
+            </Button>
+            <div className="flex justify-end pt-2">
+              <Button type="submit" disabled={savingFineTypes}>
+                {savingFineTypes ? "Menyimpan..." : "Simpan Jenis Denda"}
+              </Button>
+            </div>
+          </form>
+        </CardBody>
+      </Card>
+
+      {/* Expense Categories / Kategori Pengeluaran */}
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <span className="inline-flex items-center gap-2">
+              <FileText className="h-4 w-4 text-brand-600" />
+              Kategori Pengeluaran
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardBody>
+          <form onSubmit={handleSaveExpenseTypes} className="space-y-3">
+            <p className="text-xs text-slate-500">
+              Atur kategori-kategori pengeluaran yang muncul di dropdown saat tambah pengeluaran.
+            </p>
+            {expenseTypes.map((et, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="🔧"
+                  value={et.emoji}
+                  onChange={(e) => {
+                    const updated = [...expenseTypes];
+                    updated[i] = { ...updated[i], emoji: e.target.value };
+                    setExpenseTypes(updated);
+                  }}
+                  className="w-12 rounded-lg border border-slate-300 px-2 py-2 text-center text-sm"
+                />
+                <input
+                  type="text"
+                  placeholder="Nama kategori"
+                  value={et.label}
+                  onChange={(e) => {
+                    const updated = [...expenseTypes];
+                    updated[i] = { ...updated[i], label: e.target.value, key: e.target.value.toLowerCase().replace(/\s+/g, "_") };
+                    setExpenseTypes(updated);
+                  }}
+                  className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => setExpenseTypes(expenseTypes.filter((_, idx) => idx !== i))}
+                  className="rounded-lg p-2 text-red-500 hover:bg-red-50"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setExpenseTypes([...expenseTypes, { key: "", label: "", emoji: "📋" }])}
+            >
+              <span className="inline-flex items-center gap-1">
+                <Plus className="h-3.5 w-3.5" />
+                Tambah Kategori
+              </span>
+            </Button>
+            <div className="flex justify-end pt-2">
+              <Button type="submit" disabled={savingExpenseTypes}>
+                {savingExpenseTypes ? "Menyimpan..." : "Simpan Kategori"}
               </Button>
             </div>
           </form>

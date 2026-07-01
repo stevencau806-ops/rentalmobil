@@ -9,6 +9,8 @@ export interface Car {
   tariff_per_day: number;
   status: CarStatus;
   photo_url: string | null;
+  commission_percent: number; // 0 = milik sendiri
+  commission_note: string | null; // keterangan pemilik/catatan
   created_at: string;
 }
 
@@ -48,13 +50,20 @@ export interface Booking {
   payment_status: PaymentStatus;
   actual_return_date: string | null;
   notes: string | null;
+  additional_fines: string | null; // JSON: AdditionalFine[]
   created_at: string;
   // Joined (optional)
   cars?: Pick<Car, "brand" | "model" | "plate" | "tariff_per_day"> | null;
   customers?: Pick<Customer, "name" | "nik" | "phone"> | null;
 }
 
-export type ExpenseType = "service" | "tax" | "oil" | "other";
+export interface AdditionalFine {
+  type: string; // e.g. "bbm", "kerusakan", "lainnya"
+  label: string; // display name
+  amount: number;
+}
+
+export type ExpenseType = "service" | "tax" | "oil" | "commission" | "other";
 
 export interface Expense {
   id: string;
@@ -72,6 +81,24 @@ export interface Settings {
   id: string;
   fine_per_hour: number;
   app_name: string;
+  phone: string | null;
+  nota_terms: string | null; // JSON array of strings
+  nota_signatures: string | null; // JSON: { left: string, right: string }
+  qris_url: string | null; // URL gambar QRIS
+  fine_types: string | null; // JSON: FineType[]
+  expense_types: string | null; // JSON: ExpenseCategory[]
+}
+
+export interface FineType {
+  key: string;
+  label: string;
+  emoji: string;
+}
+
+export interface ExpenseCategory {
+  key: string;
+  label: string;
+  emoji: string;
 }
 
 // Form input types (no id, no timestamps)

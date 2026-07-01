@@ -1,18 +1,18 @@
-import { getBookings, getExpenses } from "@/lib/queries";
+import { getBookings, getExpenses, getCars } from "@/lib/queries";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ReportsClient } from "@/components/reports/ReportsClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function LaporanPage() {
-  const [bookings, expenses] = await Promise.all([getBookings(), getExpenses()]);
+  const [bookings, expenses, cars] = await Promise.all([getBookings(), getExpenses(), getCars()]);
   return (
     <div>
       <PageHeader
         title="Laporan"
-        description="Analisis pendapatan, pengeluaran, dan riwayat rental. Semua dapat dicetak/diekspor ke PDF."
+        description="Analisis pendapatan, pengeluaran, komisi, dan riwayat rental."
       />
-      <ReportsClient bookings={bookings} expenses={expenses} />
+      <ReportsClient bookings={bookings} expenses={expenses} cars={cars} />
     </div>
   );
 }

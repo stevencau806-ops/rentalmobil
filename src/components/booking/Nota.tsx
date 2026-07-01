@@ -1,135 +1,197 @@
-import type { Booking } from "@/lib/types";
-import { formatRupiah, formatTanggal, formatTanggalWaktu } from "@/lib/utils";
-import { Logo } from "@/components/Logo";
+import type { Booking, AdditionalFine } from "@/lib/types";
+import { formatRupiah, formatTanggalWaktu } from "@/lib/utils";
+
+const DEFAULT_TERMS = [
+  "Kendaraan tidak dapat dipindah tangankan tanpa seizin pemilik.",
+  "Kendaraan tidak dapat dijadikan jaminan/digadaikan.",
+  "Pelanggaran no 1 & 2 diproses melalui jalur hukum.",
+  "Perubahan rute wajib konfirmasi ke pemilik mobil.",
+  "Bersedia mengembalikan kendaraan seperti saat diambil.",
+  "Bersedia mengembalikan BBM sesuai balok saat diambil.",
+  "Kerusakan & kecelakaan dalam masa sewa ditanggung penyewa.",
+  "Dilarang membawa barang haram/narkoba selama masa sewa.",
+  "Denda keterlambatan Rp40.000/jam.",
+];
+
+const DEFAULT_SIGNATURES = { left: "Penyewa", right: "Pemilik" };
 
 interface NotaProps {
   booking: Booking;
   appName?: string;
+  phone?: string | null;
+  notaTerms?: string | null;
+  notaSignatures?: string | null;
 }
 
-/** Print-ready receipt/invoice view. Used inside a modal. */
-export function Nota({ booking, appName = "Erlangga Rental Mobil" }: NotaProps) {
+function parseTerms(raw: string | null | undefined): string[] {
+  if (!raw) return DEFAULT_TERMS;
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    return DEFAULT_TERMS;
+  } catch {
+    return DEFAULT_TERMS;
+  }
+}
+
+function parseSignatures(raw: string | null | undefined): { left: string; right: string } {
+  if (!raw) return DEFAULT_SIGNATURES;
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed.left === "string") return parsed;
+    return DEFAULT_SIGNATURES;
+  } catch {
+    return DEFAULT_SIGNATURES;
+  }
+}
+
+/** Thermal 80mm receipt - optimized for EPPOS thermal printer */
+export function Nota({ booking, appName = "Erlangga Rental Mobil", phone, notaTerms, notaSignatures }: NotaProps) {
   const subtotal = Number(booking.total_cost);
   const lateFee = Number(booking.late_fee || 0);
-  const total = subtotal + lateFee;
+  let additionalFinesList: AdditionalFine[] = [];
+  if (booking.additional_fines) {
+    try { additionalFinesList = JSON.parse(booking.additional_fines); } catch { /* */ }
+  }
+  const additionalFinesTotal = additionalFinesList.reduce((s, f) => s + (f.amount || 0), 0);
+  const total = subtotal + lateFee + additionalFinesTotal;
+  const terms = parseTerms(notaTerms);
+  const signatures = parseSignatures(notaSignatures);
+
+  // Parse extension info from notes: [EXT:originalEndDate|extDays]
+  let originalEndDate: string | null = null;
+  let extendedDays = 0;
+  let cleanNotes = booking.notes || "";
+  const extMatch = cleanNotes.match(/\[EXT:([^|]+)\|(\d+)\]/);
+  if (extMatch) {
+    originalEndDate = extMatch[1];
+    extendedDays = Number(extMatch[2]);
+    cleanNotes = cleanNotes.replace(/\[EXT:[^\]]+\]/, "").trim();
+  }
+  const originalDays = booking.duration_days - extendedDays;
 
   return (
-    <div className="bg-white p-6 text-slate-900" id="nota-print-area">
+    <div className="nota-receipt bg-white px-3 py-2 font-mono text-[10px] leading-tight text-black" id="nota-print-area">
       {/* Header */}
-      <div className="flex items-center justify-between border-b-2 border-brand-800 pb-4">
-        <Logo size={88} />
-        <div className="text-right text-xs text-slate-500">
-          <p className="font-semibold text-slate-800">{appName}</p>
-          <p>www.erlangga-rental.id</p>
-          <p>0812-0000-0000</p>
-        </div>
+      <div className="nota-section text-center">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="https://res.cloudinary.com/dqjh7utdb/image/upload/v1782311347/u5zbqafgubkyjckrjseq.png" alt={appName} className="mx-auto h-14 w-auto" />
+        <p className="font-semibold text-[11px]">{appName}</p>
+        {phone && <p className="text-[10px]">{phone}</p>}
       </div>
+      <div className="nota-divider" />
 
-      <div className="mt-4 flex items-center justify-between">
-        <h2 className="text-lg font-bold uppercase tracking-wide text-brand-900">
-          Nota Sewa Mobil
-        </h2>
-        <span
-          className={`rounded px-2 py-1 text-xs font-bold ${
-            booking.payment_status === "paid"
-              ? "bg-emerald-100 text-emerald-700"
-              : "bg-amber-100 text-amber-700"
-          }`}
-        >
+      {/* Status */}
+      <div className="nota-section text-center">
+        <span className="border border-black px-1.5 py-0.5 text-[10px] font-semibold">
           {booking.payment_status === "paid" ? "LUNAS" : "BELUM BAYAR"}
         </span>
+        <span className="ml-2 text-[9px]">#{booking.id.slice(0, 8).toUpperCase()}</span>
+      </div>
+      <div className="nota-divider" />
+
+      {/* Pelanggan */}
+      <div className="nota-section">
+        <p className="text-[9px] font-semibold">PELANGGAN</p>
+        <p className="font-semibold">{booking.customers?.name ?? "-"}</p>
+        <p>NIK: {booking.customers?.nik ?? "-"} | HP: {booking.customers?.phone ?? "-"}</p>
       </div>
 
-      {/* Booking info */}
-      <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
-        <div>
-          <p className="text-xs uppercase text-slate-400">No. Booking</p>
-          <p className="font-mono font-semibold">#{booking.id.slice(0, 8).toUpperCase()}</p>
-        </div>
-        <div>
-          <p className="text-xs uppercase text-slate-400">Tanggal Cetak</p>
-          <p>{formatTanggalWaktu(new Date().toISOString())}</p>
-        </div>
+      {/* Kendaraan */}
+      <div className="nota-section">
+        <p className="text-[9px] font-semibold">KENDARAAN</p>
+        <p>{booking.cars?.brand} {booking.cars?.model} | Plat: {booking.cars?.plate ?? "-"}</p>
       </div>
 
-      {/* Customer & car */}
-      <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
-        <div className="rounded-lg border border-slate-200 p-3">
-          <p className="mb-1 text-xs font-semibold uppercase text-slate-400">Pelanggan</p>
-          <p className="font-semibold text-slate-900">{booking.customers?.name ?? "-"}</p>
-          <p className="text-xs text-slate-500">NIK: {booking.customers?.nik ?? "-"}</p>
-          <p className="text-xs text-slate-500">HP: {booking.customers?.phone ?? "-"}</p>
-        </div>
-        <div className="rounded-lg border border-slate-200 p-3">
-          <p className="mb-1 text-xs font-semibold uppercase text-slate-400">Kendaraan</p>
-          <p className="font-semibold text-slate-900">
-            {booking.cars?.brand} {booking.cars?.model}
-          </p>
-          <p className="text-xs text-slate-500">Plat: {booking.cars?.plate ?? "-"}</p>
-        </div>
+      {/* Periode */}
+      <div className="nota-section">
+        <p className="text-[9px] font-semibold">PERIODE SEWA: {originalDays} Hari</p>
+        <p>{formatTanggalWaktu(booking.start_date)} s/d {originalEndDate ? formatTanggalWaktu(originalEndDate) : formatTanggalWaktu(booking.end_date)}</p>
+        {extendedDays > 0 && (
+          <>
+            <p className="mt-1 text-[9px] font-semibold">PERPANJANGAN: +{extendedDays} Hari</p>
+            <p>{originalEndDate ? formatTanggalWaktu(originalEndDate) : ""} s/d {formatTanggalWaktu(booking.end_date)}</p>
+            <p className="text-[9px] mt-0.5">Total: {booking.duration_days} Hari</p>
+          </>
+        )}
+        {booking.actual_return_date && (
+          <p className="mt-0.5">Dikembalikan: {formatTanggalWaktu(booking.actual_return_date)}</p>
+        )}
       </div>
 
-      {/* Rental detail */}
-      <table className="mt-4 w-full text-sm">
-        <thead>
-          <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
-            <th className="py-2">Deskripsi</th>
-            <th className="py-2 text-center">Detail</th>
-            <th className="py-2 text-right">Jumlah</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100">
-          <tr>
-            <td className="py-2">
-              Sewa Mobil
-              <div className="text-xs text-slate-500">
-                {formatTanggal(booking.start_date)} → {formatTanggal(booking.end_date)}
-              </div>
-            </td>
-            <td className="py-2 text-center">
-              {booking.duration_days} hari × {formatRupiah(booking.cars?.tariff_per_day ?? 0)}
-            </td>
-            <td className="py-2 text-right font-medium">{formatRupiah(subtotal)}</td>
-          </tr>
-          {lateFee > 0 && (
-            <tr>
-              <td className="py-2">
-                Denda Keterlambatan
-                {booking.actual_return_date && (
-                  <div className="text-xs text-slate-500">
-                    Dikembalikan: {formatTanggalWaktu(booking.actual_return_date)}
-                  </div>
-                )}
-              </td>
-              <td className="py-2 text-center text-red-600">Terlambat</td>
-              <td className="py-2 text-right font-medium text-red-600">
-                {formatRupiah(lateFee)}
-              </td>
-            </tr>
-          )}
-        </tbody>
-        <tfoot>
-          <tr className="border-t-2 border-slate-300">
-            <td colSpan={2} className="py-3 text-right font-bold uppercase text-slate-700">
-              Total
-            </td>
-            <td className="py-3 text-right text-lg font-bold text-brand-900">
-              {formatRupiah(total)}
-            </td>
-          </tr>
-        </tfoot>
-      </table>
-
-      {booking.notes && (
-        <div className="mt-4 rounded-lg bg-slate-50 p-3 text-sm">
-          <p className="text-xs font-semibold uppercase text-slate-400">Catatan</p>
-          <p className="text-slate-600">{booking.notes}</p>
+      {/* Catatan */}
+      {cleanNotes && (
+        <div className="nota-section">
+          <p className="text-[9px] font-semibold">CATATAN</p>
+          <p>{cleanNotes}</p>
         </div>
       )}
 
-      <div className="mt-6 border-t border-slate-200 pt-4 text-center text-xs text-slate-400">
-        <p>Terima kasih telah menyewa di {appName}.</p>
-        <p className="mt-1">Simpan nota ini sebagai bukti transaksi.</p>
+      <div className="nota-divider" />
+
+      {/* Biaya */}
+      <div className="nota-section">
+        {extendedDays > 0 ? (
+          <>
+            <div className="flex justify-between">
+              <span>Sewa Awal</span>
+              <span>{originalDays} x {formatRupiah(booking.cars?.tariff_per_day ?? 0)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Perpanjangan</span>
+              <span>{extendedDays} x {formatRupiah(booking.cars?.tariff_per_day ?? 0)}</span>
+            </div>
+          </>
+        ) : (
+          <div className="flex justify-between">
+            <span>Sewa Mobil</span>
+            <span>{booking.duration_days} x {formatRupiah(booking.cars?.tariff_per_day ?? 0)}</span>
+          </div>
+        )}
+        {lateFee > 0 && (
+          <div className="flex justify-between">
+            <span>Denda Keterlambatan</span>
+            <span>{formatRupiah(lateFee)}</span>
+          </div>
+        )}
+        {additionalFinesList.map((fine, i) => (
+          <div key={i} className="flex justify-between">
+            <span>Denda: {fine.label || fine.type}</span>
+            <span>{formatRupiah(fine.amount)}</span>
+          </div>
+        ))}
+      </div>
+      <div className="nota-section flex justify-between font-semibold text-[12px]">
+        <span>TOTAL</span>
+        <span>{formatRupiah(total)}</span>
+      </div>
+      <div className="nota-divider" />
+
+      {/* Ketentuan */}
+      <div className="nota-section">
+        <p className="text-[9px] font-semibold">KETENTUAN SEWA</p>
+        <ol className="nota-terms list-decimal pl-3 text-[9px]">
+          {terms.map((t, i) => <li key={i}>{t}</li>)}
+        </ol>
+      </div>
+      <div className="nota-divider" />
+
+      {/* TTD */}
+      <div className="nota-section flex justify-between px-2">
+        <div className="text-center">
+          <p className="text-[10px]">{signatures.left}</p>
+          <div className="mt-8 w-16 border-b border-black" />
+        </div>
+        <div className="text-center">
+          <p className="text-[10px]">{signatures.right}</p>
+          <div className="mt-8 w-16 border-b border-black" />
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="nota-section text-center text-[9px]">
+        <p>Terima kasih - {appName}</p>
+        <p>Dicetak: {formatTanggalWaktu(new Date().toISOString())}</p>
       </div>
     </div>
   );

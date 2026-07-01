@@ -30,15 +30,24 @@ body {
 }
 
 @media print {
-  .no-print {
+  /* Hide non-print elements */
+  .no-print,
+  .no-print * {
     display: none !important;
   }
+
   .print-only {
     display: block !important;
   }
 
-  html,
-  body {
+  /* Hide sidebar and navigation */
+  aside,
+  nav,
+  .fixed.inset-0 {
+    display: none !important;
+  }
+
+  html, body {
     background: white !important;
     margin: 0 !important;
     padding: 0 !important;
@@ -48,13 +57,73 @@ body {
     print-color-adjust: exact !important;
   }
 
-  /* Thermal nota: fill 80mm paper edge-to-edge */
-  @page {
-    size: 80mm auto;
-    margin: 0;
+  /* Remove sidebar offset */
+  main {
+    padding-left: 0 !important;
+    margin: 0 !important;
   }
 
-  /* Reset the modal shell so it does not constrain the receipt */
+  /* ===== NOTA PRINT (Booking page) ===== */
+  /* Class added by JS before printing on <html> */
+  html.printing-nota body > *:not(#print-container) {
+    display: none !important;
+  }
+
+  html.printing-nota #print-container {
+    display: block !important;
+    position: static !important;
+    overflow: visible !important;
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  /* The nota itself - thermal 80mm style */
+  #nota-print-area {
+    display: block !important;
+    position: static !important;
+    width: 80mm !important;
+    max-width: 80mm !important;
+    margin: 0 !important;
+    background: white !important;
+    padding: 2mm !important;
+    font-size: 10px !important;
+    line-height: 1.3 !important;
+    color: #000 !important;
+    overflow: visible !important;
+    box-sizing: border-box !important;
+  }
+  #nota-print-area * {
+    color: #000 !important;
+  }
+  #nota-print-area img {
+    width: auto !important;
+    max-height: 3.5rem !important;
+    height: auto !important;
+  }
+
+  /* ===== REPORT PRINT (Laporan page) ===== */
+  /* Show all content normally, just hide mobile card view and show desktop table */
+  .md\\:hidden {
+    display: none !important;
+  }
+  .hidden.md\\:block {
+    display: block !important;
+  }
+
+  /* Make report content full width */
+  main > div {
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+
+  /* Report typography */
+  table {
+    font-size: 11px !important;
+  }
+
+  /* Reset modal shell so a direct Ctrl+P from modal does not constrain receipt */
   [role="dialog"] {
     position: static !important;
     width: 80mm !important;
@@ -74,8 +143,37 @@ body {
   }
 
   /* Hide modal header/backdrop when printing */
-  .fixed.inset-0,
   [role="dialog"] .sticky.top-0 {
     display: none !important;
   }
+
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+}
+
+.print-only,
+#print-container {
+  display: none;
+}
+
+/* Nota receipt styles (visible in modal too) */
+.nota-receipt .nota-section {
+  margin-bottom: 6px;
+}
+.nota-receipt .nota-divider {
+  border-bottom: 1px dashed #ccc;
+  margin: 6px 0;
+}
+.nota-receipt .nota-terms {
+  line-height: 1.5;
+}
+
+@keyframes slide-up {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
 }

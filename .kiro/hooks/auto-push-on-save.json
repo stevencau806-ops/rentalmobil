@@ -1,0 +1,14 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Auto Push to Main on Save",
+      "trigger": "PostFileSave",
+      "description": "Automatically commits all changes and pushes to main branch whenever a file is saved.",
+      "action": {
+        "type": "command",
+        "command": "powershell -Command \"Set-Location 'c:\\Users\\user\\Downloads\\rental mobil\\rentalmobil'; git add -A; git commit -m 'auto: update files' --allow-empty; git push origin main\""
+      }
+    }
+  ]
+}
