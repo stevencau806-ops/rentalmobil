@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useMemo, useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams } from "next/navigation";
 import { Trash2, TriangleAlert, Check, Printer, Plus, Eye } from "lucide-react";
 import type { Booking, Car, Customer, AdditionalFine, FineType } from "@/lib/types";
@@ -445,6 +446,27 @@ export function BookingClient({
     window.open(waUrl, "_blank");
   }
 
+
+ // ---- Print nota (thermal 80mm) ----
+ // Uses the printing-nota class + #print-container mechanism from
+ // globals.css: print in the SAME window/tab (no popup/blob window),
+ // since opening a new tab for printing was unreliable on mobile
+ // browsers (wrong paper width detected, image failed to load).
+ function handlePrintNota() {
+ const html = document.documentElement;
+ html.classList.add("printing-nota");
+
+ function cleanup() {
+ html.classList.remove("printing-nota");
+ window.removeEventListener("afterprint", cleanup);
+ }
+ window.addEventListener("afterprint", cleanup);
+ // Fallback for mobile browsers that do not fire afterprint reliably
+ setTimeout(cleanup, 8000);
+
+ // Wait a tick so the portal content is painted before printing
+ setTimeout(() => window.print(), 50);
+ }
   const columns: Column<Booking>[] = [
     {
       key: "customer",
@@ -1075,133 +1097,39 @@ export function BookingClient({
         })()}
       </Modal>
 
-      {/* Nota Modal */}
-      <Modal open={!!notaBooking} onClose={() => setNotaBooking(null)} title="Nota Sewa" size="lg">
-        {notaBooking && <Nota booking={notaBooking} phone={phone} notaTerms={notaTerms} notaSignatures={notaSignatures} />}
-        {notaBooking && (
-          <div className="mt-4 flex justify-end gap-2 no-print">
-            <Button variant="outline" onClick={() => setNotaBooking(null)}>
-              Tutup
-            </Button>
-            <Button variant="outline" onClick={() => shareToWhatsApp(notaBooking)}>
-              <span className="inline-flex items-center gap-1.5">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.113.549 4.1 1.511 5.828L0 24l6.335-1.652A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.82c-1.89 0-3.69-.508-5.27-1.45l-.378-.224-3.91 1.02 1.042-3.8-.247-.393A9.77 9.77 0 012.18 12c0-5.422 4.398-9.82 9.82-9.82 5.422 0 9.82 4.398 9.82 9.82 0 5.422-4.398 9.82-9.82 9.82z"/></svg>
-                Share WA
-              </span>
-            </Button>
- <Button onClick={() => {
- const notaEl = document.getElementById("nota-print-area");
- if (!notaEl) return;
+ {/* Nota Modal */}
+ <Modal open={!!notaBooking} onClose={() => setNotaBooking(null)} title="Nota Sewa" size="lg">
+ {notaBooking && <Nota booking={notaBooking} phone={phone} notaTerms={notaTerms} notaSignatures={notaSignatures} />}
+ {notaBooking && (
+ <div className="mt-4 flex justify-end gap-2 no-print">
+ <Button variant="outline" onClick={() => setNotaBooking(null)}>
+ Tutup
+ </Button>
+ <Button variant="outline" onClick={() => shareToWhatsApp(notaBooking)}>
+ <span className="inline-flex items-center gap-1.5">
+ <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.113.549 4.1 1.511 5.828L0 24l6.335-1.652A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.82c-1.89 0-3.69-.508-5.27-1.45l-.378-.224-3.91 1.02 1.042-3.8-.247-.393A9.77 9.77 0 012.18 12c0-5.422 4.398-9.82 9.82-9.82 5.422 0 9.82 4.398 9.82 9.82 0 5.422-4.398 9.82-9.82 9.82z"/></svg>
+ Share WA
+ </span>
+ </Button>
+ <Button onClick={handlePrintNota}>
+ <span className="inline-flex items-center gap-1.5">
+ <Printer className="h-4 w-4" />
+ Cetak / PDF
+ </span>
+ </Button>
+ </div>
+ )}
+ </Modal>
 
- // Self-contained print CSS. Does NOT rely on cloning the live
- // page's <style>/<link> tags into the popup window: Tailwind's
- // dev-mode injected styles don't reliably survive that copy,
- // which was breaking the layout (spacing, numbered list, etc.)
- // when printed.
- const printCss = `
- * { box-sizing: border-box; }
- body {
- background: #fff !important;
- margin: 0 !important;
- padding: 0 !important;
- width: 80mm !important;
- color: #000;
- font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
- }
- #nota-print-area {
- display: block !important;
- width: 76mm !important;
- max-width: 76mm !important;
- margin: 0 auto !important;
- padding: 8px 6px !important;
- background: #fff !important;
- overflow: visible !important;
- font-size: 10px !important;
- line-height: 1.35 !important;
- color: #000 !important;
- }
- #nota-print-area * { color: #000 !important; box-sizing: border-box; }
- #nota-print-area img { display: block; max-height: 3.5rem; width: auto; height: auto; margin: 0 auto; }
- #nota-print-area .nota-section { margin-bottom: 6px; }
- #nota-print-area .nota-divider { border-bottom: 1px dashed #999; margin: 6px 0; }
- #nota-print-area .nota-terms { line-height: 1.5; list-style-position: inside; padding-left: 12px; }
- #nota-print-area .nota-terms li { list-style-type: decimal; }
- #nota-print-area .text-center { text-align: center; }
- #nota-print-area .flex { display: flex; }
- #nota-print-area .justify-between { justify-content: space-between; }
- #nota-print-area .px-2 { padding-left: 8px; padding-right: 8px; }
- #nota-print-area .mt-8 { margin-top: 2rem; }
- #nota-print-area .mt-1 { margin-top: 0.25rem; }
- #nota-print-area .mx-auto { margin-left: auto; margin-right: auto; }
- #nota-print-area .w-16 { width: 4rem; }
- #nota-print-area .border-b { border-bottom: 1px solid #000; }
- #nota-print-area .border { border: 1px solid #000; }
- #nota-print-area .border-black { border-color: #000; }
- #nota-print-area .ml-2 { margin-left: 0.5rem; }
- #nota-print-area .font-semibold { font-weight: 600; }
- #nota-print-area p { margin: 0; }
- #nota-print-area ol { margin: 0; }
- @page { size: 80mm 297mm; margin: 0mm; }
- `;
-
- const html = `
- <!DOCTYPE html>
- <html>
- <head>
- <meta charset="utf-8" />
- <meta name="viewport" content="width=device-width, initial-scale=1" />
- <title>Nota Sewa</title>
- <style>${printCss}</style>
- </head>
- <body>
- ${notaEl.outerHTML}
- <script>
- (function() {
- function doPrint() { window.print(); }
- var imgs = Array.prototype.slice.call(document.images);
- var pending = imgs.filter(function (img) { return !img.complete; }).length;
- if (pending === 0) {
- setTimeout(doPrint, 150);
- } else {
- var done = 0;
- imgs.forEach(function (img) {
- if (img.complete) return;
- img.addEventListener("load", check);
- img.addEventListener("error", check);
- });
- function check() {
- done += 1;
- if (done >= pending) setTimeout(doPrint, 150);
- }
- setTimeout(doPrint, 2000);
- }
- })();
- </script>
- </body>
- </html>
- `;
-
- const blob = new Blob([html], { type: "text/html;charset=utf-8" });
- const url = URL.createObjectURL(blob);
- const printWindow = window.open(url, "_blank");
- if (!printWindow) {
- toast("Browser memblokir popup. Izinkan popup untuk mencetak nota.", "error");
- URL.revokeObjectURL(url);
- return;
- }
-
- // Fallback: if popup blocked or user returns, revoke blob after 60s
- setTimeout(() => URL.revokeObjectURL(url), 60000);
- }}>
-              <span className="inline-flex items-center gap-1.5">
-                <Printer className="h-4 w-4" />
-                Cetak / PDF
-              </span>
-            </Button>
-          </div>
-        )}
-      </Modal>
-
+ {/* Hidden print-only container - rendered via portal so it survives
+ the Modal DOM tree unmounting; shown only while html.printing-nota
+ is toggled on (see globals.css). */}
+ {notaBooking && typeof document !== "undefined" && createPortal(
+ <div id="print-container">
+ <Nota booking={notaBooking} phone={phone} notaTerms={notaTerms} notaSignatures={notaSignatures} />
+ </div>,
+ document.body
+ )}
       <ConfirmDialog
         open={!!deleteId}
         message="Yakin ingin menghapus booking ini? Mobil akan dikembalikan ke status tersedia."
