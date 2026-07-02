@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useMemo, useState, useEffect } from "react";
-import { createPortal } from "react-dom";
+import { renderToStaticMarkup } from "react-dom/server";
 import { useSearchParams } from "next/navigation";
 import { Trash2, TriangleAlert, Check, Printer, Plus, Eye } from "lucide-react";
 import type { Booking, Car, Customer, AdditionalFine, FineType } from "@/lib/types";
@@ -448,24 +448,102 @@ export function BookingClient({
 
 
  // ---- Print nota (thermal 80mm) ----
- // Uses the printing-nota class + #print-container mechanism from
- // globals.css: print in the SAME window/tab (no popup/blob window),
- // since opening a new tab for printing was unreliable on mobile
- // browsers (wrong paper width detected, image failed to load).
+ // Renders the nota to a static HTML string and prints it inside a
+ // hidden iframe - a document that is completely separate from the
+ // booking page. Previously we toggled a CSS class on the main
+ // document and called window.print(); that broke on mobile because
+ // some Android print flows (e.g. Bluetooth thermal printer apps)
+ // capture the print snapshot asynchronously, so the class got
+ // removed again before the snapshot was taken and the booking
+ // page ended up in the printout instead of the nota. An iframe
+ // has no such race: it never contains anything except the nota,
+ // no matter how long the print job takes.
  function handlePrintNota() {
- const html = document.documentElement;
- html.classList.add("printing-nota");
+ if (!notaBooking) return;
+ const notaHtml = renderToStaticMarkup(
+ <Nota booking={notaBooking} phone={phone} notaTerms={notaTerms} notaSignatures={notaSignatures} />
+ );
+ const printCss = `
+ * { box-sizing: border-box; }
+ body { margin: 0; padding: 0; background: #fff; width: 80mm; color: #000;
+ font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace; }
+ .nota-receipt { width: 76mm; max-width: 76mm; margin: 0 auto; font-size: 10px; line-height: 1.35; color: #000; }
+ .nota-receipt * { color: #000; box-sizing: border-box; }
+ .nota-receipt img { display: block; max-height: 3.5rem; width: auto; height: auto; margin: 0 auto; }
+ .nota-section { margin-bottom: 6px; }
+ .nota-divider { border-bottom: 1px dashed #999; margin: 6px 0; }
+ .nota-terms { line-height: 1.5; list-style-position: inside; padding-left: 12px; }
+ .nota-terms li { list-style-type: decimal; }
+ .text-center { text-align: center; }
+ .flex { display: flex; }
+ .justify-between { justify-content: space-between; }
+ .px-2 { padding-left: 8px; padding-right: 8px; }
+ .mt-8 { margin-top: 2rem; }
+ .mt-1 { margin-top: 0.25rem; }
+ .mx-auto { margin-left: auto; margin-right: auto; }
+ .w-16 { width: 4rem; }
+ .border-b { border-bottom: 1px solid #000; }
+ .border { border: 1px solid #000; }
+ .border-black { border-color: #000; }
+ .ml-2 { margin-left: 0.5rem; }
+ .font-semibold { font-weight: 600; }
+ p { margin: 0; }
+ ol { margin: 0; }
+ @page { size: 80mm 297mm; margin: 0mm; }
+ `;
 
- function cleanup() {
- html.classList.remove("printing-nota");
- window.removeEventListener("afterprint", cleanup);
+ const html = `<!DOCTYPE html><html><head><meta charset="utf-8" />
+ <meta name="viewport" content="width=device-width, initial-scale=1" />
+ <title>Nota Sewa</title><style>${printCss}</style></head>
+ <body>${notaHtml}</body></html>`;
+
+ let iframe = document.getElementById("nota-print-iframe") as HTMLIFrameElement | null;
+ if (!iframe) {
+ iframe = document.createElement("iframe");
+ iframe.id = "nota-print-iframe";
+ iframe.style.position = "fixed";
+ iframe.style.right = "0";
+ iframe.style.bottom = "0";
+ iframe.style.width = "0";
+ iframe.style.height = "0";
+ iframe.style.border = "0";
+ document.body.appendChild(iframe);
  }
- window.addEventListener("afterprint", cleanup);
- // Fallback for mobile browsers that do not fire afterprint reliably
- setTimeout(cleanup, 8000);
 
- // Wait a tick so the portal content is painted before printing
- setTimeout(() => window.print(), 50);
+ const doc = iframe.contentWindow?.document;
+ if (!doc) return;
+ doc.open();
+ doc.write(html);
+ doc.close();
+
+ const win = iframe.contentWindow;
+ if (!win) return;
+
+ function triggerPrint() {
+ win?.focus();
+ win?.print();
+ }
+
+ // Wait for images (e.g. the logo) to finish loading before printing,
+ // instead of a fixed delay that may fire too soon.
+ const imgs = Array.from(doc.images);
+ const pending = imgs.filter((img) => !img.complete).length;
+ if (pending === 0) {
+ setTimeout(triggerPrint, 150);
+ } else {
+ let done = 0;
+ const check = () => {
+ done += 1;
+ if (done >= pending) setTimeout(triggerPrint, 150);
+ };
+ imgs.forEach((img) => {
+ if (img.complete) return;
+ img.addEventListener("load", check);
+ img.addEventListener("error", check);
+ });
+ // Safety fallback in case an image never fires load/error
+ setTimeout(triggerPrint, 2000);
+ }
  }
   const columns: Column<Booking>[] = [
     {
@@ -1120,16 +1198,6 @@ export function BookingClient({
  </div>
  )}
  </Modal>
-
- {/* Hidden print-only container - rendered via portal so it survives
- the Modal DOM tree unmounting; shown only while html.printing-nota
- is toggled on (see globals.css). */}
- {notaBooking && typeof document !== "undefined" && createPortal(
- <div id="print-container">
- <Nota booking={notaBooking} phone={phone} notaTerms={notaTerms} notaSignatures={notaSignatures} />
- </div>,
- document.body
- )}
       <ConfirmDialog
         open={!!deleteId}
         message="Yakin ingin menghapus booking ini? Mobil akan dikembalikan ke status tersedia."
