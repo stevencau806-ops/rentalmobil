@@ -86,6 +86,7 @@ body {
     overflow: visible !important;
   }
   #nota-print-area * {
+ font-weight: 700 !important;
     color: #000 !important;
   }
   #nota-print-area img {

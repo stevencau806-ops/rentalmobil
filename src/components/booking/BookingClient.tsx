@@ -468,7 +468,7 @@ export function BookingClient({
  body { margin: 0; padding: 0; background: #fff; width: 100%; color: #000;
  font-family: Arial, Helvetica, sans-serif; }
  .nota-receipt { width: 100%; max-width: 100%; margin: 0 auto; font-size: 16px; line-height: 1.6; color: #000; }
- .nota-receipt * { color: #000; box-sizing: border-box; }
+ .nota-receipt * { color: #000; font-weight: 700; box-sizing: border-box; }
  .nota-receipt img { display: block; max-height: 3.5rem; width: auto; height: auto; margin: 0 auto; }
  .nota-section { margin-bottom: 6px; }
  .nota-divider { border-bottom: 1px dashed #999; margin: 6px 0; }
