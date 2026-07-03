@@ -465,14 +465,14 @@ export function BookingClient({
  );
  const printCss = `
  * { box-sizing: border-box; }
- body { margin: 0; padding: 0; background: #fff; width: 80mm; color: #000;
+ body { margin: 0; padding: 0; background: #fff; width: 100%; color: #000;
  font-family: Arial, Helvetica, sans-serif; }
- .nota-receipt { width: 80mm; max-width: 80mm; margin: 0 auto; font-size: 14px; line-height: 1.5; color: #000; }
+ .nota-receipt { width: 100%; max-width: 100%; margin: 0 auto; font-size: 16px; line-height: 1.6; color: #000; }
  .nota-receipt * { color: #000; box-sizing: border-box; }
  .nota-receipt img { display: block; max-height: 3.5rem; width: auto; height: auto; margin: 0 auto; }
  .nota-section { margin-bottom: 6px; }
  .nota-divider { border-bottom: 1px dashed #999; margin: 6px 0; }
- .nota-terms { line-height: 1.5; list-style-position: inside; padding-left: 12px; }
+ .nota-terms { line-height: 1.6; list-style-position: inside; padding-left: 12px; }
  .nota-terms li { list-style-type: decimal; }
  .text-center { text-align: center; }
  .flex { display: flex; }
@@ -489,7 +489,7 @@ export function BookingClient({
  .font-semibold { font-weight: 600; }
  p { margin: 0; }
  ol { margin: 0; }
- @page { size: 80mm auto; margin: 0mm; }
+ @page { size: auto; margin: 5mm; }
  `;
 
  const html = `<!DOCTYPE html><html><head><meta charset="utf-8" />

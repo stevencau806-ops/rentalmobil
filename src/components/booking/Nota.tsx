@@ -76,7 +76,7 @@ export function Nota({ booking, appName = "Erlangga Rental Mobil", phone, notaTe
   const originalDays = booking.duration_days - extendedDays;
 
   return (
-    <div className="nota-receipt bg-white px-3 py-2 font-sans text-[14px] leading-normal text-black" id="nota-print-area">
+    <div className="nota-receipt bg-white p-4 font-sans text-[14px] leading-normal text-black" id="nota-print-area">
       {/* Header */}
       <div className="nota-section text-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
