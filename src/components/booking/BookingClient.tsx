@@ -466,8 +466,8 @@ export function BookingClient({
  const printCss = `
  * { box-sizing: border-box; }
  body { margin: 0; padding: 0; background: #fff; width: 80mm; color: #000;
- font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace; }
- .nota-receipt { width: 76mm; max-width: 76mm; margin: 0 auto; font-size: 10px; line-height: 1.35; color: #000; }
+ font-family: Arial, Helvetica, sans-serif; }
+ .nota-receipt { width: 80mm; max-width: 80mm; margin: 0 auto; font-size: 14px; line-height: 1.5; color: #000; }
  .nota-receipt * { color: #000; box-sizing: border-box; }
  .nota-receipt img { display: block; max-height: 3.5rem; width: auto; height: auto; margin: 0 auto; }
  .nota-section { margin-bottom: 6px; }
@@ -489,7 +489,7 @@ export function BookingClient({
  .font-semibold { font-weight: 600; }
  p { margin: 0; }
  ol { margin: 0; }
- @page { size: 80mm 297mm; margin: 0mm; }
+ @page { size: 80mm auto; margin: 0mm; }
  `;
 
  const html = `<!DOCTYPE html><html><head><meta charset="utf-8" />
