@@ -464,32 +464,38 @@ export function BookingClient({
  <Nota booking={notaBooking} phone={phone} notaTerms={notaTerms} notaSignatures={notaSignatures} />
  );
  const printCss = `
- * { box-sizing: border-box; }
+ * { box-sizing: border-box; margin: 0; padding: 0; }
+ @page { size: 80mm auto; margin: 2mm; }
  body { margin: 0; padding: 0; background: #fff; width: 100%; color: #000;
  font-family: Arial, Helvetica, sans-serif; }
- .nota-receipt { width: 100%; max-width: 100%; margin: 0 auto; font-size: 16px; line-height: 1.6; color: #000; }
- .nota-receipt * { color: #000; font-weight: 700; box-sizing: border-box; }
- .nota-receipt img { display: block; max-height: 3.5rem; width: auto; height: auto; margin: 0 auto; }
- .nota-section { margin-bottom: 6px; }
- .nota-divider { border-bottom: 1px dashed #999; margin: 6px 0; }
- .nota-terms { line-height: 1.6; list-style-position: inside; padding-left: 12px; }
- .nota-terms li { list-style-type: decimal; }
+ .nota-receipt { width: 72mm; max-width: 72mm; margin: 0 auto; font-size: 11px; line-height: 1.3; color: #000;
+ word-break: break-word; overflow-wrap: break-word; }
+ .nota-receipt * { color: #000; font-weight: 700; box-sizing: border-box; word-break: break-word; overflow-wrap: break-word; }
+ .nota-receipt img { display: block; max-height: 2.5rem; width: auto; height: auto; margin: 0 auto; }
+ .nota-section { margin-bottom: 4mm; }
+ .nota-divider { border-bottom: 1px dashed #555; margin: 3mm 0; }
+ .nota-terms { line-height: 1.25; list-style-position: inside; padding-left: 8px; font-size: 9px; }
+ .nota-terms li { list-style-type: decimal; margin-bottom: 1px; }
  .text-center { text-align: center; }
- .flex { display: flex; }
+ .flex { display: flex; gap: 4px; }
+ .flex > * { min-width: 0; flex-shrink: 1; }
  .justify-between { justify-content: space-between; }
- .px-2 { padding-left: 8px; padding-right: 8px; }
- .mt-8 { margin-top: 2rem; }
- .mt-1 { margin-top: 0.25rem; }
+ .px-2 { padding-left: 6px; padding-right: 6px; }
+ .mt-8 { margin-top: 1.2rem; }
+ .mt-1 { margin-top: 0.15rem; }
+ .mt-0\\.5 { margin-top: 0.1rem; }
  .mx-auto { margin-left: auto; margin-right: auto; }
- .w-16 { width: 4rem; }
+ .w-16 { width: 3.5rem; }
  .border-b { border-bottom: 1px solid #000; }
  .border { border: 1px solid #000; }
  .border-black { border-color: #000; }
- .ml-2 { margin-left: 0.5rem; }
+ .ml-2 { margin-left: 0.3rem; }
  .font-semibold { font-weight: 600; }
- p { margin: 0; }
+ p { margin: 0; font-size: 11px; }
  ol { margin: 0; }
- @page { size: auto; margin: 5mm; }
+ .text-\\[16px\\] { font-size: 13px; }
+ .text-\\[14px\\] { font-size: 11px; }
+ .text-\\[13px\\] { font-size: 10px; }
  `;
 
  const html = `<!DOCTYPE html><html><head><meta charset="utf-8" />
