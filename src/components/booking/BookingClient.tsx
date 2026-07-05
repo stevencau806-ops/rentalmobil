@@ -1,10 +1,10 @@
 ﻿"use client";
 
 import { useMemo, useState, useEffect } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
 import { useSearchParams } from "next/navigation";
 import { Trash2, TriangleAlert, Check, Printer, Plus, Eye } from "lucide-react";
 import type { Booking, Car, Customer, AdditionalFine, FineType } from "@/lib/types";
+import { generateNotaPDF } from "@/lib/generate-nota-pdf";
 import { createClient } from "@/lib/supabase/client";
 import { DataTable } from "@/components/ui/DataTable";
 import type { Column } from "@/components/ui/DataTable";
@@ -14,7 +14,6 @@ import { Modal } from "@/components/ui/Modal";
 import { Input, Textarea, Select } from "@/components/ui/Input";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
-import { Nota } from "./Nota";
 import {
   formatRupiah,
   formatTanggal,
@@ -448,110 +447,19 @@ export function BookingClient({
 
 
  // ---- Print nota (thermal 80mm) ----
- // Renders the nota to a static HTML string and prints it inside a
- // hidden iframe - a document that is completely separate from the
- // booking page. Previously we toggled a CSS class on the main
- // document and called window.print(); that broke on mobile because
- // some Android print flows (e.g. Bluetooth thermal printer apps)
- // capture the print snapshot asynchronously, so the class got
- // removed again before the snapshot was taken and the booking
- // page ended up in the printout instead of the nota. An iframe
- // has no such race: it never contains anything except the nota,
- // no matter how long the print job takes.
+ // Uses window.open approach (like Warung-Efge) for clean printing.
+ // Opens nota in new tab with print button - works reliably on both
+ // desktop and mobile (Bluetooth thermal printers).
  function handlePrintNota() {
  if (!notaBooking) return;
- const notaHtml = renderToStaticMarkup(
- <Nota booking={notaBooking} phone={phone} notaTerms={notaTerms} notaSignatures={notaSignatures} />
- );
- const printCss = `
- * { box-sizing: border-box; margin: 0; padding: 0; }
- @page { size: 80mm auto; margin: 0; }
- html { width: 80mm; }
- body { margin: 0; padding: 1mm 2mm; background: #fff; width: 76mm; max-width: 76mm; color: #000;
- font-family: Arial, Helvetica, sans-serif; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
- .nota-receipt { width: 100%; max-width: 76mm; margin: 0; padding: 0; font-size: 13px; line-height: 1.4; color: #000;
- word-break: break-word; overflow-wrap: break-word; }
- .nota-receipt * { color: #000; font-weight: 700; box-sizing: border-box; }
- .nota-receipt img { display: block; max-height: 3rem; width: auto; height: auto; margin: 0 auto 1mm; }
- .nota-section { margin-bottom: 1.5mm; }
- .nota-divider { border: none; border-bottom: 1px dashed #000; margin: 1.5mm 0; }
- .nota-terms { line-height: 1.3; list-style-position: inside; padding-left: 0; font-size: 11px; margin: 0; }
- .nota-terms li { list-style-type: decimal; margin-bottom: 0; }
- .text-center { text-align: center; }
- .flex { display: flex; }
- .flex > * { min-width: 0; flex-shrink: 1; }
- .justify-between { justify-content: space-between; }
- .px-2 { padding-left: 4px; padding-right: 4px; }
- .mt-8 { margin-top: 6mm; }
- .mt-1 { margin-top: 1px; }
- .mt-0\\.5 { margin-top: 1px; }
- .mx-auto { margin-left: auto; margin-right: auto; }
- .w-16 { width: 3rem; }
- .border-b { border-bottom: 1px solid #000; }
- .border { border: 1px solid #000; }
- .border-black { border-color: #000; }
- .ml-2 { margin-left: 4px; }
- .font-semibold { font-weight: 700; }
- p { margin: 0; font-size: 13px; line-height: 1.4; }
- ol { margin: 0; padding-left: 14px; }
- .text-\\[16px\\] { font-size: 15px; font-weight: 700; }
- .text-\\[14px\\] { font-size: 13px; }
- .text-\\[13px\\] { font-size: 12px; }
- `;
-
- const html = `<!DOCTYPE html><html><head><meta charset="utf-8" />
- <meta name="viewport" content="width=device-width, initial-scale=1" />
- <title>Nota Sewa</title><style>${printCss}</style></head>
- <body>${notaHtml}</body></html>`;
-
- let iframe = document.getElementById("nota-print-iframe") as HTMLIFrameElement | null;
- if (!iframe) {
- iframe = document.createElement("iframe");
- iframe.id = "nota-print-iframe";
- iframe.style.position = "fixed";
- iframe.style.right = "0";
- iframe.style.bottom = "0";
- iframe.style.width = "0";
- iframe.style.height = "0";
- iframe.style.border = "0";
- document.body.appendChild(iframe);
- }
-
- const doc = iframe.contentWindow?.document;
- if (!doc) return;
- doc.open();
- doc.write(html);
- doc.close();
-
- const win = iframe.contentWindow;
- if (!win) return;
-
- function triggerPrint() {
- win?.focus();
- win?.print();
- }
-
- // Wait for images (e.g. the logo) to finish loading before printing,
- // instead of a fixed delay that may fire too soon.
- const imgs = Array.from(doc.images);
- const pending = imgs.filter((img) => !img.complete).length;
- if (pending === 0) {
- setTimeout(triggerPrint, 150);
- } else {
- let done = 0;
- const check = () => {
- done += 1;
- if (done >= pending) setTimeout(triggerPrint, 150);
- };
- imgs.forEach((img) => {
- if (img.complete) return;
- img.addEventListener("load", check);
- img.addEventListener("error", check);
+ generateNotaPDF({
+ booking: notaBooking,
+ phone,
+ notaTerms,
+ notaSignatures,
  });
- // Safety fallback in case an image never fires load/error
- setTimeout(triggerPrint, 2000);
  }
- }
+
   const columns: Column<Booking>[] = [
     {
       key: "customer",
@@ -1184,9 +1092,15 @@ export function BookingClient({
 
  {/* Nota Modal */}
  <Modal open={!!notaBooking} onClose={() => setNotaBooking(null)} title="Nota Sewa" size="lg">
- {notaBooking && <Nota booking={notaBooking} phone={phone} notaTerms={notaTerms} notaSignatures={notaSignatures} />}
  {notaBooking && (
- <div className="mt-4 flex justify-end gap-2 no-print">
+ <div className="space-y-4">
+ <div className="bg-slate-50 rounded-lg p-4 text-sm space-y-1">
+ <p><span className="text-slate-500">Pelanggan:</span> <strong>{notaBooking.customers?.name ?? "-"}</strong></p>
+ <p><span className="text-slate-500">Kendaraan:</span> {notaBooking.cars?.brand} {notaBooking.cars?.model} ({notaBooking.cars?.plate})</p>
+ <p><span className="text-slate-500">Durasi:</span> {notaBooking.duration_days} hari</p>
+ <p><span className="text-slate-500">Total:</span> <strong>{formatRupiah(Number(notaBooking.total_cost) + Number(notaBooking.late_fee || 0))}</strong></p>
+ </div>
+ <div className="flex justify-end gap-2">
  <Button variant="outline" onClick={() => setNotaBooking(null)}>
  Tutup
  </Button>
@@ -1202,6 +1116,7 @@ export function BookingClient({
  Cetak / PDF
  </span>
  </Button>
+ </div>
  </div>
  )}
  </Modal>
