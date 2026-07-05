@@ -465,10 +465,11 @@ export function BookingClient({
  );
  const printCss = `
  * { box-sizing: border-box; margin: 0; padding: 0; }
- @page { margin: 0; }
- body { margin: 0; padding: 1mm 2mm; background: #fff; width: 100%; color: #000;
- font-family: Arial, Helvetica, sans-serif; }
- .nota-receipt { width: 100%; max-width: 100%; margin: 0; padding: 0; font-size: 13px; line-height: 1.4; color: #000;
+ @page { size: 80mm auto; margin: 0; }
+ html { width: 80mm; }
+ body { margin: 0; padding: 1mm 2mm; background: #fff; width: 76mm; max-width: 76mm; color: #000;
+ font-family: Arial, Helvetica, sans-serif; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+ .nota-receipt { width: 100%; max-width: 76mm; margin: 0; padding: 0; font-size: 13px; line-height: 1.4; color: #000;
  word-break: break-word; overflow-wrap: break-word; }
  .nota-receipt * { color: #000; font-weight: 700; box-sizing: border-box; }
  .nota-receipt img { display: block; max-height: 3rem; width: auto; height: auto; margin: 0 auto 1mm; }
