@@ -47,6 +47,8 @@ body {
     overflow: visible !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+    -webkit-text-size-adjust: 100% !important;
+    text-size-adjust: 100% !important;
   }
 
   /* Remove sidebar offset */
@@ -75,13 +77,13 @@ body {
   #nota-print-area {
     display: block !important;
     position: static !important;
-    width: 72mm !important;
-    max-width: 72mm !important;
+    width: 76mm !important;
+    max-width: 76mm !important;
     margin: 0 auto !important;
     background: white !important;
     padding: 2mm !important;
-    font-size: 9px !important;
-    line-height: 1.3 !important;
+    font-size: 11px !important;
+    line-height: 1.5 !important;
     overflow: visible !important;
     page-break-inside: avoid !important;
   }
@@ -122,13 +124,13 @@ body {
     font-size: 13px !important;
   }
   #nota-print-area .text-xs {
-    font-size: 9px !important;
-  }
-  #nota-print-area .text-sm {
     font-size: 10px !important;
   }
+  #nota-print-area .text-sm {
+    font-size: 11px !important;
+  }
   #nota-print-area .text-\[11px\] {
-    font-size: 8.5px !important;
+    font-size: 11px !important;
   }
   #nota-print-area table {
     font-size: 10px !important;
@@ -159,7 +161,7 @@ body {
 
   @page {
     size: 80mm auto;
-    margin: 2mm;
+    margin: 0mm;
   }
 }
 

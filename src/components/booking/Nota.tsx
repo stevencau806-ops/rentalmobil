@@ -60,39 +60,39 @@ export function Nota({ booking, appName = "Erlangga Rental Mobil", phone, notaTe
   const line = "────────────────────────────────────────";
 
   return (
-    <div className="bg-white px-3 py-2 font-mono text-[10px] leading-tight text-black" id="nota-print-area">
+    <div className="bg-white px-3 py-2 font-mono text-[11px] leading-normal text-black" id="nota-print-area">
       {/* Header */}
       <div className="text-center">
         <img src="https://res.cloudinary.com/dqjh7utdb/image/upload/v1782311347/u5zbqafgubkyjckrjseq.png" alt={appName} className="mx-auto h-16 w-auto" />
         <p className="font-bold">{appName}</p>
-        {phone && <p className="text-[9px]">{phone}</p>}
+        {phone && <p className="text-[10px]">{phone}</p>}
       </div>
-      <p className="text-center text-[8px] text-gray-400">{line}</p>
+      <p className="text-center text-[9px] text-gray-400">{line}</p>
 
       {/* Status */}
       <div className="text-center">
-        <span className="border border-black px-1.5 py-0.5 text-[9px] font-bold">
+        <span className="border border-black px-1.5 py-0.5 text-[10px] font-bold">
           {booking.payment_status === "paid" ? "LUNAS" : "BELUM BAYAR"}
         </span>
-        <span className="ml-2 text-[8px]">#{booking.id.slice(0, 8).toUpperCase()}</span>
+        <span className="ml-2 text-[9px]">#{booking.id.slice(0, 8).toUpperCase()}</span>
       </div>
-      <p className="text-center text-[8px] text-gray-400">{line}</p>
+      <p className="text-center text-[9px] text-gray-400">{line}</p>
 
       {/* Pelanggan + Kendaraan + Periode - semua 1 block */}
       <div>
-        <p className="text-[8px] font-bold">PELANGGAN</p>
+        <p className="text-[9px] font-bold">PELANGGAN</p>
         <p className="font-bold">{booking.customers?.name ?? "-"}</p>
         <p>NIK: {booking.customers?.nik ?? "-"} | HP: {booking.customers?.phone ?? "-"}</p>
       </div>
       <div className="mt-1">
-        <p className="text-[8px] font-bold">KENDARAAN</p>
+        <p className="text-[9px] font-bold">KENDARAAN</p>
         <p>{booking.cars?.brand} {booking.cars?.model} | Plat: {booking.cars?.plate ?? "-"}</p>
       </div>
       <div className="mt-1">
-        <p className="text-[8px] font-bold">PERIODE SEWA: {booking.duration_days} Hari</p>
+        <p className="text-[9px] font-bold">PERIODE SEWA: {booking.duration_days} Hari</p>
         <p>{formatTanggalWaktu(booking.start_date)} s/d {formatTanggalWaktu(booking.end_date)}</p>
       </div>
-      <p className="text-center text-[8px] text-gray-400">{line}</p>
+      <p className="text-center text-[9px] text-gray-400">{line}</p>
 
       {/* Biaya */}
       <div className="flex justify-between">
@@ -115,29 +115,29 @@ export function Nota({ booking, appName = "Erlangga Rental Mobil", phone, notaTe
         <span>TOTAL</span>
         <span>{formatRupiah(total)}</span>
       </div>
-      <p className="text-center text-[8px] text-gray-400">{line}</p>
+      <p className="text-center text-[9px] text-gray-400">{line}</p>
 
       {/* Ketentuan */}
-      <p className="text-[8px] font-bold">KETENTUAN SEWA</p>
-      <ol className="list-decimal pl-3 text-[8px] leading-snug">
+      <p className="text-[9px] font-bold">KETENTUAN SEWA</p>
+      <ol className="list-decimal pl-3 text-[9px] leading-snug">
         {terms.map((t, i) => <li key={i}>{t}</li>)}
       </ol>
-      <p className="mt-1 text-center text-[8px] text-gray-400">{line}</p>
+      <p className="mt-1 text-center text-[9px] text-gray-400">{line}</p>
 
       {/* TTD */}
       <div className="mt-1 flex justify-between px-2">
         <div className="text-center">
-          <p className="text-[9px]">{signatures.left}</p>
+          <p className="text-[10px]">{signatures.left}</p>
           <div className="mt-8 w-16 border-b border-black" />
         </div>
         <div className="text-center">
-          <p className="text-[9px]">{signatures.right}</p>
+          <p className="text-[10px]">{signatures.right}</p>
           <div className="mt-8 w-16 border-b border-black" />
         </div>
       </div>
 
       {/* Footer */}
-      <p className="mt-2 text-center text-[8px]">
+      <p className="mt-2 text-center text-[9px]">
         Terima kasih - {appName}
         <br />
         Dicetak: {formatTanggalWaktu(new Date().toISOString())}

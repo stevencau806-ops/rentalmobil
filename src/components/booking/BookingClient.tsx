@@ -972,61 +972,93 @@ export function BookingClient({
               const notaEl = document.getElementById("nota-print-area");
               if (!notaEl) return;
 
-              // Collect inline <style> tags
-              const inlineStyles = Array.from(document.querySelectorAll("style"))
-                .map((el) => el.outerHTML)
-                .join("\n");
-
-              // Convert <link rel="stylesheet"> to absolute URLs so they load in blob
-              const linkStyles = Array.from(document.querySelectorAll("link[rel='stylesheet']"))
-                .map((el) => {
-                  const href = (el as HTMLLinkElement).href;
-                  return `<link rel="stylesheet" href="${href}" />`;
-                })
-                .join("\n");
-
-              const html = `
-                <!DOCTYPE html>
-                <html>
-                <head>
-                  <meta charset="utf-8" />
-                  <meta name="viewport" content="width=device-width, initial-scale=1" />
-                  <title>Nota Sewa</title>
-                  ${linkStyles}
-                  ${inlineStyles}
-                  <style>
-                    @page { size: 80mm auto; margin: 2mm; }
-                    body { background: white !important; margin: 0 !important; padding: 0 !important; }
-                    #nota-print-area {
-                      width: 72mm !important;
-                      max-width: 72mm !important;
-                      margin: 0 auto !important;
-                      padding: 2mm !important;
-                      background: white !important;
-                      overflow: visible !important;
-                      page-break-inside: avoid !important;
-                    }
-                  </style>
-                </head>
-                <body>
-                  ${notaEl.outerHTML}
-                  <script>
-                    (function() {
-                      function tryPrint() {
-                        if (document.readyState === "complete") {
-                          setTimeout(function() { window.print(); }, 300);
-                        } else {
-                          window.addEventListener("load", function() {
-                            setTimeout(function() { window.print(); }, 300);
-                          });
-                        }
-                      }
-                      tryPrint();
-                    })();
-                  </script>
-                </body>
-                </html>
-              `;
+              const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Nota Sewa</title>
+  <style>
+    @page {
+      size: 80mm auto;
+      margin: 0mm;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 80mm;
+      margin: 0;
+      padding: 0;
+      background: white;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    body { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace; font-size: 11px; line-height: 1.5; color: #000; }
+    #nota-print-area {
+      width: 76mm;
+      max-width: 76mm;
+      margin: 0 auto;
+      padding: 2mm;
+      background: white;
+      overflow: visible;
+      page-break-inside: avoid;
+    }
+    /* Utilities */
+    .font-mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace; }
+    .font-bold { font-weight: 700; }
+    .text-center { text-align: center; }
+    .text-right { text-align: right; }
+    .text-black { color: #000; }
+    .text-gray-400 { color: #9ca3af; }
+    .bg-white { background: white; }
+    .flex { display: flex; }
+    .inline-flex { display: inline-flex; }
+    .block { display: block; }
+    .items-center { align-items: center; }
+    .justify-between { justify-content: space-between; }
+    .flex-col { flex-direction: column; }
+    .gap-1 { gap: 0.25rem; }
+    .gap-1\\.5 { gap: 0.375rem; }
+    .gap-2 { gap: 0.5rem; }
+    .mx-auto { margin-left: auto; margin-right: auto; }
+    .mt-1 { margin-top: 0.25rem; }
+    .mt-2 { margin-top: 0.5rem; }
+    .mt-8 { margin-top: 2rem; }
+    .ml-2 { margin-left: 0.5rem; }
+    .px-1\\.5 { padding-left: 0.375rem; padding-right: 0.375rem; }
+    .px-2 { padding-left: 0.5rem; padding-right: 0.5rem; }
+    .px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
+    .py-0\\.5 { padding-top: 0.125rem; padding-bottom: 0.125rem; }
+    .py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+    .pl-3 { padding-left: 0.75rem; }
+    .border { border: 1px solid #000; }
+    .border-b { border-bottom: 1px solid #000; }
+    .border-black { border-color: #000; }
+    .w-16 { width: 4rem; }
+    .w-auto { width: auto; }
+    .h-16 { height: 4rem; }
+    .leading-normal { line-height: 1.5; }
+    .leading-snug { line-height: 1.375; }
+    .list-decimal { list-style-type: decimal; }
+    .text-\\[11px\\] { font-size: 11px; }
+    .text-\\[10px\\] { font-size: 10px; }
+    .text-\\[9px\\] { font-size: 9px; }
+    img { max-width: 100%; height: auto; }
+    img.h-16 { height: 4rem; width: auto; }
+    ol { margin: 0; padding-left: 0.75rem; }
+    p { margin: 0; }
+  </style>
+</head>
+<body>
+  ${notaEl.outerHTML}
+  <script>
+    document.fonts.ready.then(function() {
+      window.print();
+    });
+  </script>
+</body>
+</html>`;
 
               const blob = new Blob([html], { type: "text/html;charset=utf-8" });
               const url = URL.createObjectURL(blob);
@@ -1037,7 +1069,7 @@ export function BookingClient({
                 return;
               }
 
-              // Fallback: if popup blocked or user returns, revoke blob after 60s
+              // Fallback: revoke blob after 60s
               setTimeout(() => URL.revokeObjectURL(url), 60000);
             }}>
               <span className="inline-flex items-center gap-1.5">
