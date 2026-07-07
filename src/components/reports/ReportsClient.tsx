@@ -1535,23 +1535,54 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
                   {carBookings.length === 0 ? (
                     <p className="text-center text-xs text-slate-400 py-4">Tidak ada data rental periode ini.</p>
                   ) : (
-                    carBookings.map((b) => (
-                      <div key={b.id} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-semibold text-slate-900">{b.customers?.name}</p>
-                          <Badge tone={b.payment_status === "paid" ? "green" : "yellow"}>
-                            {paymentStatusLabel[b.payment_status]}
-                          </Badge>
+                    carBookings.map((b) => {
+                      const lateFee = Number(b.late_fee || 0);
+                      let addFines: { label: string; amount: number }[] = [];
+                      if (b.additional_fines) {
+                        try { addFines = JSON.parse(b.additional_fines); } catch { /* */ }
+                      }
+                      const addFinesTotal = addFines.reduce((s, f) => s + (f.amount || 0), 0);
+                      const totalDendaItem = lateFee + addFinesTotal;
+                      return (
+                        <div key={b.id} className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-semibold text-slate-900">{b.customers?.name}</p>
+                            <Badge tone={b.payment_status === "paid" ? "green" : "yellow"}>
+                              {paymentStatusLabel[b.payment_status]}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-slate-500 mt-1">
+                            {formatTanggal(b.start_date)} → {formatTanggal(b.end_date)} · {b.duration_days} hari
+                          </p>
+                          <div className="flex items-center justify-between mt-1">
+                            <p className="text-sm font-bold text-slate-900">{formatRupiah(Number(b.total_cost) + totalDendaItem)}</p>
+                          </div>
+                          {totalDendaItem > 0 && (
+                            <div className="mt-1.5 rounded-lg bg-red-50 px-2.5 py-1.5 space-y-0.5">
+                              <p className="text-[10px] font-bold uppercase text-red-700">Denda</p>
+                              {lateFee > 0 && (
+                                <div className="flex justify-between text-[11px]">
+                                  <span className="text-red-600">Keterlambatan</span>
+                                  <span className="font-semibold text-red-700">{formatRupiah(lateFee)}</span>
+                                </div>
+                              )}
+                              {addFines.map((f, i) => (
+                                <div key={i} className="flex justify-between text-[11px]">
+                                  <span className="text-red-600">{f.label}</span>
+                                  <span className="font-semibold text-red-700">{formatRupiah(f.amount)}</span>
+                                </div>
+                              ))}
+                              {(lateFee > 0 && addFines.length > 0) && (
+                                <div className="flex justify-between text-[11px] border-t border-red-200 pt-0.5 mt-0.5">
+                                  <span className="font-bold text-red-700">Total Denda</span>
+                                  <span className="font-bold text-red-700">{formatRupiah(totalDendaItem)}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
-                        <p className="text-xs text-slate-500 mt-1">
-                          {formatTanggal(b.start_date)} → {formatTanggal(b.end_date)} · {b.duration_days} hari
-                        </p>
-                        <div className="flex items-center justify-between mt-1">
-                          <p className="text-sm font-bold text-slate-900">{formatRupiah(Number(b.total_cost) + getTotalDenda(b))}</p>
-                          {getTotalDenda(b) > 0 && <span className="text-[10px] text-red-600 font-medium">Denda: {formatRupiah(getTotalDenda(b))}</span>}
-                        </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </div>
