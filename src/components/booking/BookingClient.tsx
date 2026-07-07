@@ -101,9 +101,9 @@ export function BookingClient({
 
   // Parse fine types from settings
   const DEFAULT_FINE_TYPES: FineType[] = [
-    { key: "bbm", label: "Bahan Bakar", emoji: "â›½" },
-    { key: "kerusakan", label: "Kerusakan", emoji: "ðŸ”§" },
-    { key: "lainnya", label: "Lainnya", emoji: "ðŸ“‹" },
+    { key: "bbm", label: "Bahan Bakar", emoji: "⛽" },
+    { key: "kerusakan", label: "Kerusakan", emoji: "🔧" },
+    { key: "lainnya", label: "Lainnya", emoji: "📋" },
   ];
   const fineTypeOptions: FineType[] = useMemo(() => {
     if (!fineTypesRaw) return DEFAULT_FINE_TYPES;
@@ -396,7 +396,7 @@ export function BookingClient({
         const fines: AdditionalFine[] = JSON.parse(b.additional_fines);
         fines.forEach((f) => {
           additionalTotal += f.amount || 0;
-          additionalLines += `â€¢ Denda ${f.label}: ${formatRupiah(f.amount)}\n`;
+          additionalLines += `• Denda ${f.label}: ${formatRupiah(f.amount)}\n`;
         });
       } catch { /* ignore */ }
     }
@@ -404,9 +404,9 @@ export function BookingClient({
     const grandTotal = Number(b.total_cost) + totalFines;
 
     const text = [
-      `ðŸ“„ *NOTA SEWA MOBIL*`,
+      `📄 *NOTA SEWA MOBIL*`,
       `_Erlangga Rental Mobil_`,
-      `â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”`,
+      `━━━━━━━━━━━━━━━`,
       ``,
       `*Pelanggan:* ${b.customers?.name ?? "-"}`,
       `*Mobil:* ${b.cars?.brand} ${b.cars?.model} (${b.cars?.plate})`,
@@ -415,16 +415,16 @@ export function BookingClient({
       `*Durasi:* ${b.duration_days} hari`,
       b.actual_return_date ? `*Dikembalikan:* ${formatTanggalWaktu(b.actual_return_date)}` : "",
       ``,
-      `â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”`,
+      `━━━━━━━━━━━━━━━`,
       `*Sewa:* ${formatRupiah(Number(b.total_cost))}`,
       lateFee > 0 ? `*Denda Terlambat:* ${formatRupiah(lateFee)}` : "",
       additionalLines.trim(),
       totalFines > 0 ? `*Total Denda:* ${formatRupiah(totalFines)}` : "",
-      `â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”`,
+      `━━━━━━━━━━━━━━━`,
       `*TOTAL: ${formatRupiah(grandTotal)}*`,
-      `*Status:* ${b.payment_status === "paid" ? "âœ… LUNAS" : "â³ BELUM BAYAR"}`,
+      `*Status:* ${b.payment_status === "paid" ? "✅ LUNAS" : "⏳ BELUM BAYAR"}`,
       ``,
-      `Terima kasih telah menyewa di Erlangga Rental Mobil ðŸ™`,
+      `Terima kasih telah menyewa di Erlangga Rental Mobil 🙏`,
     ]
       .filter((line) => line !== "")
       .join("\n");
@@ -467,7 +467,7 @@ export function BookingClient({
       render: (b) => (
         <div>
           <p className="font-medium text-slate-900">{b.customers?.name ?? "-"}</p>
-          <p className="text-xs text-slate-500">{b.cars?.brand} {b.cars?.model} Â· {b.cars?.plate}</p>
+          <p className="text-xs text-slate-500">{b.cars?.brand} {b.cars?.model} · {b.cars?.plate}</p>
         </div>
       ),
     },
@@ -477,7 +477,7 @@ export function BookingClient({
       hideOnMobile: true,
       render: (b) => (
         <div className="text-xs text-slate-600">
-          <p>{formatTanggal(b.start_date)} â†’</p>
+          <p>{formatTanggal(b.start_date)} →</p>
           <p>{formatTanggal(b.end_date)}</p>
           <p className="text-slate-400">{b.duration_days} hari</p>
         </div>
@@ -583,7 +583,7 @@ export function BookingClient({
                     {b.customers?.name ?? "-"}
                   </p>
                   <p className="mt-0.5 text-xs text-slate-500">
-                    {b.cars?.brand} {b.cars?.model} Â· {b.cars?.plate}
+                    {b.cars?.brand} {b.cars?.model} · {b.cars?.plate}
                   </p>
                 </div>
                 <div className="shrink-0 text-right">
@@ -601,7 +601,7 @@ export function BookingClient({
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z" />
                 </svg>
-                <span>{formatTanggal(b.start_date)} â†’ {formatTanggal(b.end_date)}</span>
+                <span>{formatTanggal(b.start_date)} → {formatTanggal(b.end_date)}</span>
                 <span className="text-slate-400">({b.duration_days} hari)</span>
               </div>
 
@@ -674,10 +674,10 @@ export function BookingClient({
             value={newForm.car_id}
             onChange={(e) => setNewForm({ ...newForm, car_id: e.target.value })}
           >
-            <option value="">â€” Pilih mobil tersedia â€”</option>
+            <option value="">— Pilih mobil tersedia —</option>
             {availableCars.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.brand} {c.model} ({c.plate}) â€” {formatRupiah(Number(c.tariff_per_day))}/hari
+                {c.brand} {c.model} ({c.plate}) — {formatRupiah(Number(c.tariff_per_day))}/hari
               </option>
             ))}
           </Select>
@@ -693,12 +693,12 @@ export function BookingClient({
             value={newForm.customer_id}
             onChange={(e) => setNewForm({ ...newForm, customer_id: e.target.value })}
           >
-            <option value="">â€” Pilih pelanggan â€”</option>
+            <option value="">— Pilih pelanggan —</option>
             {customers.map((c) => {
               const bl = blacklistNiks.includes(c.nik);
               return (
                 <option key={c.id} value={c.id}>
-                  {c.name} Â· {c.nik}{bl ? "  [BLACKLIST]" : ""}
+                  {c.name} · {c.nik}{bl ? "  [BLACKLIST]" : ""}
                 </option>
               );
             })}
@@ -773,7 +773,7 @@ export function BookingClient({
           <form onSubmit={handleReturn} className="space-y-4">
             <div className="rounded-lg bg-slate-50 p-3 text-sm">
               <p className="font-medium text-slate-900">
-                {returnBooking.customers?.name} â€” {returnBooking.cars?.brand} {returnBooking.cars?.model}
+                {returnBooking.customers?.name} — {returnBooking.cars?.brand} {returnBooking.cars?.model}
               </p>
               <p className="text-xs text-slate-500">
                 Jatuh tempo: {formatTanggalWaktu(returnBooking.end_date)}
@@ -812,7 +812,7 @@ export function BookingClient({
                   ) : (
                     <p className="flex items-center gap-1.5 font-semibold">
                       <Check className="h-4 w-4 text-emerald-600" />
-                      Tepat waktu â€” tidak ada denda keterlambatan
+                      Tepat waktu — tidak ada denda keterlambatan
                     </p>
                   )}
                 </div>
@@ -1052,7 +1052,7 @@ export function BookingClient({
                 <p className="text-[10px] font-bold uppercase opacity-80">Rincian Biaya</p>
                 <div className="mt-2 space-y-1.5 text-xs">
                   <div className="flex justify-between">
-                    <span>Sewa {b.duration_days} hari Ã— {formatRupiah(b.cars?.tariff_per_day ?? 0)}</span>
+                    <span>Sewa {b.duration_days} hari × {formatRupiah(b.cars?.tariff_per_day ?? 0)}</span>
                     <span className="font-bold">{formatRupiah(Number(b.total_cost))}</span>
                   </div>
                   {lateFee > 0 && (

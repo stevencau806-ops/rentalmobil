@@ -42,6 +42,18 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
   const [adminPage, setAdminPage] = useState(1);
   const ITEMS_PER_PAGE = 5;
 
+  // Helper: calculate total fines (late_fee + additional_fines) for a booking
+  function getTotalDenda(b: Booking): number {
+    let denda = Number(b.late_fee || 0);
+    if (b.additional_fines) {
+      try {
+        const fines = JSON.parse(b.additional_fines) as { amount: number }[];
+        denda += fines.reduce((s, f) => s + (f.amount || 0), 0);
+      } catch { /* ignore */ }
+    }
+    return denda;
+  }
+
   const years = useMemo(() => {
     const set = new Set<number>([now.getFullYear()]);
     bookings.forEach((b) => set.add(new Date(b.start_date).getFullYear()));
@@ -55,7 +67,7 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
     return d.getMonth() === month && d.getFullYear() === year;
   });
   const monthRevenue = monthBookings.reduce(
-    (s, b) => s + Number(b.total_cost) + Number(b.late_fee || 0),
+    (s, b) => s + Number(b.total_cost) + getTotalDenda(b),
     0
   );
   const monthExpenses = expenses
@@ -71,7 +83,7 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
     (b) => new Date(b.start_date).getFullYear() === year
   );
   const yearRevenue = yearBookings.reduce(
-    (s, b) => s + Number(b.total_cost) + Number(b.late_fee || 0),
+    (s, b) => s + Number(b.total_cost) + getTotalDenda(b),
     0
   );
   const yearExpenses = expenses
@@ -85,7 +97,7 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
         const d = new Date(b.start_date);
         return d.getMonth() === m && d.getFullYear() === year;
       })
-      .reduce((s, b) => s + Number(b.total_cost) + Number(b.late_fee || 0), 0);
+      .reduce((s, b) => s + Number(b.total_cost) + getTotalDenda(b), 0);
     const exp = expenses
       .filter((e) => {
         const d = new Date(e.date);
@@ -110,17 +122,6 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
   // ---- Commission calculation ----
   // From all bookings with car that has commission
   const commissionData = useMemo(() => {
-    function calcDenda(b: typeof bookings[0]): number {
-      let denda = Number(b.late_fee || 0);
-      if (b.additional_fines) {
-        try {
-          const fines = JSON.parse(b.additional_fines) as { amount: number }[];
-          denda += fines.reduce((s, f) => s + (f.amount || 0), 0);
-        } catch { /* ignore */ }
-      }
-      return denda;
-    }
-
     const monthCommissions = bookings
       .filter((b) => {
         const d = new Date(b.start_date);
@@ -130,7 +131,7 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
         const car = cars.find((c) => c.id === b.car_id);
         const percent = car?.commission_percent ?? 0;
         const totalSewa = Number(b.total_cost);
-        const totalDenda = calcDenda(b);
+        const totalDenda = getTotalDenda(b);
         const commissionSewa = Math.round(totalSewa * percent / 100);
         const commissionDenda = Math.round(totalDenda * percent / 100);
         const commissionAmount = commissionSewa + commissionDenda;
@@ -153,7 +154,7 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
         const car = cars.find((c) => c.id === b.car_id);
         const percent = car?.commission_percent ?? 0;
         const totalSewa = Number(b.total_cost);
-        const totalDenda = calcDenda(b);
+        const totalDenda = getTotalDenda(b);
         const commissionSewa = Math.round(totalSewa * percent / 100);
         const commissionDenda = Math.round(totalDenda * percent / 100);
         const commissionAmount = commissionSewa + commissionDenda;
@@ -183,23 +184,15 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
       .map((car) => {
         const carBookings = monthBookings.filter((b) => b.car_id === car.id);
         const totalRevenue = carBookings.reduce(
-          (s, b) => s + Number(b.total_cost) + Number(b.late_fee || 0),
+          (s, b) => s + Number(b.total_cost) + getTotalDenda(b),
           0
         );
         const commissionPercent = Number(car.commission_percent || 0);
         const totalCommission = carBookings
           .filter((b) => b.actual_return_date)
           .reduce((s, b) => {
-            const cost = Number(b.total_cost);
-            const late = Number(b.late_fee || 0);
-            let fines = 0;
-            if (b.additional_fines) {
-              try {
-                const parsed = JSON.parse(b.additional_fines) as { amount: number }[];
-                fines = parsed.reduce((x, f) => x + (f.amount || 0), 0);
-              } catch { /* ignore */ }
-            }
-            return s + Math.round((cost + late + fines) * commissionPercent / 100);
+            const total = Number(b.total_cost) + getTotalDenda(b);
+            return s + Math.round(total * commissionPercent / 100);
           }, 0);
         return {
           car,
@@ -217,23 +210,15 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
       .map((car) => {
         const carBookings = yearBookings.filter((b) => b.car_id === car.id);
         const totalRevenue = carBookings.reduce(
-          (s, b) => s + Number(b.total_cost) + Number(b.late_fee || 0),
+          (s, b) => s + Number(b.total_cost) + getTotalDenda(b),
           0
         );
         const commissionPercent = Number(car.commission_percent || 0);
         const totalCommission = carBookings
           .filter((b) => b.actual_return_date)
           .reduce((s, b) => {
-            const cost = Number(b.total_cost);
-            const late = Number(b.late_fee || 0);
-            let fines = 0;
-            if (b.additional_fines) {
-              try {
-                const parsed = JSON.parse(b.additional_fines) as { amount: number }[];
-                fines = parsed.reduce((x, f) => x + (f.amount || 0), 0);
-              } catch { /* ignore */ }
-            }
-            return s + Math.round((cost + late + fines) * commissionPercent / 100);
+            const total = Number(b.total_cost) + getTotalDenda(b);
+            return s + Math.round(total * commissionPercent / 100);
           }, 0);
         return {
           car,
@@ -271,7 +256,7 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
       const d = new Date(e.date);
       return e.car_id === car.id && d.getMonth() === month && d.getFullYear() === year;
     });
-    const carRevenue = carBookings.reduce((s, b) => s + Number(b.total_cost) + Number(b.late_fee || 0), 0);
+    const carRevenue = carBookings.reduce((s, b) => s + Number(b.total_cost) + getTotalDenda(b), 0);
     const carExpensesTotal = carExpensesList.reduce((s, e) => s + Number(e.amount), 0);
 
     // Commission calculation for this car
@@ -279,13 +264,7 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
     const commissionBookings = carBookings;
     const commissionDetails = commissionBookings.map((b) => {
       const totalSewa = Number(b.total_cost);
-      let totalDenda = Number(b.late_fee || 0);
-      if (b.additional_fines) {
-        try {
-          const fines = JSON.parse(b.additional_fines) as { amount: number }[];
-          totalDenda += fines.reduce((s, f) => s + (f.amount || 0), 0);
-        } catch { /* */ }
-      }
+      const totalDenda = getTotalDenda(b);
       const commissionAmount = Math.round((totalSewa + totalDenda) * commissionPercent / 100);
       return { booking: b, totalSewa, totalDenda, commissionAmount };
     });
@@ -293,7 +272,7 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
     const carProfit = carRevenue - carExpensesTotal - totalCommission;
 
     const bookingRows = carBookings.map((b) => {
-      const total = Number(b.total_cost) + Number(b.late_fee || 0);
+      const total = Number(b.total_cost) + getTotalDenda(b);
       return `<tr>
         <td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;font-size:12px;">${formatTanggal(b.start_date)}</td>
         <td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;font-size:12px;">${b.customers?.name ?? "-"}</td>
@@ -661,7 +640,7 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
               ) : (
                 <>
                   {monthBookings.slice((txPage - 1) * ITEMS_PER_PAGE, txPage * ITEMS_PER_PAGE).map((b) => {
-                    const totalWithFine = Number(b.total_cost) + Number(b.late_fee || 0);
+                    const totalWithFine = Number(b.total_cost) + getTotalDenda(b);
                     return (
                       <div key={b.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                         <div className="flex items-start justify-between">
@@ -755,7 +734,10 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
                             {b.duration_days} hari
                           </td>
                           <td className="px-4 py-3 text-right font-medium">
-                            {formatRupiah(Number(b.total_cost) + Number(b.late_fee || 0))}
+                            <span>{formatRupiah(Number(b.total_cost) + getTotalDenda(b))}</span>
+                            {getTotalDenda(b) > 0 && (
+                              <p className="text-[11px] text-red-600">+{formatRupiah(getTotalDenda(b))} denda</p>
+                            )}
                           </td>
                           <td className="px-4 py-3">
                             <Badge tone={b.payment_status === "paid" ? "green" : "yellow"}>
@@ -1149,7 +1131,7 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {cars.map((car, idx) => {
               const carBookings = monthBookings.filter((b) => b.car_id === car.id);
-              const carRevenue = carBookings.reduce((s, b) => s + Number(b.total_cost) + Number(b.late_fee || 0), 0);
+              const carRevenue = carBookings.reduce((s, b) => s + Number(b.total_cost) + getTotalDenda(b), 0);
               const carExpenses = expenses
                 .filter((e) => {
                   const d = new Date(e.date);
@@ -1160,8 +1142,7 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
               const commPercent = car.commission_percent ?? 0;
               const carCommission = commPercent > 0
                 ? carBookings.reduce((s, b) => {
-                    let total = Number(b.total_cost) + Number(b.late_fee || 0);
-                    if (b.additional_fines) { try { total += (JSON.parse(b.additional_fines) as { amount: number }[]).reduce((x, f) => x + (f.amount || 0), 0); } catch {} }
+                    const total = Number(b.total_cost) + getTotalDenda(b);
                     return s + Math.round(total * commPercent / 100);
                   }, 0)
                 : 0;
@@ -1331,7 +1312,10 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
                             {formatTanggal(b.start_date)} → {formatTanggal(b.end_date)}
                           </td>
                           <td className="px-4 py-3 text-right font-medium">
-                            {formatRupiah(Number(b.total_cost) + Number(b.late_fee || 0))}
+                            <span>{formatRupiah(Number(b.total_cost) + getTotalDenda(b))}</span>
+                            {getTotalDenda(b) > 0 && (
+                              <p className="text-[11px] text-red-600">+{formatRupiah(getTotalDenda(b))} denda</p>
+                            )}
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex flex-col gap-1">
@@ -1464,17 +1448,16 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
             const d = new Date(e.date);
             return e.car_id === car.id && d.getMonth() === month && d.getFullYear() === year;
           });
-          const carRevenue = carBookings.reduce((s, b) => s + Number(b.total_cost) + Number(b.late_fee || 0), 0);
+          const carRevenue = carBookings.reduce((s, b) => s + Number(b.total_cost) + getTotalDenda(b), 0);
           const carExpTotal = carExpensesList.reduce((s, e) => s + Number(e.amount), 0);
           const commPercent = car.commission_percent ?? 0;
           const totalCommission = commPercent > 0
             ? carBookings.reduce((s, b) => {
-                let total = Number(b.total_cost) + Number(b.late_fee || 0);
-                if (b.additional_fines) { try { total += (JSON.parse(b.additional_fines) as { amount: number }[]).reduce((x, f) => x + (f.amount || 0), 0); } catch {} }
+                const total = Number(b.total_cost) + getTotalDenda(b);
                 return s + Math.round(total * commPercent / 100);
               }, 0)
             : 0;
-          const totalDenda = carBookings.reduce((s, b) => s + Number(b.late_fee || 0), 0);
+          const totalDenda = carBookings.reduce((s, b) => s + getTotalDenda(b), 0);
           const netProfit = carRevenue - carExpTotal - totalCommission;
 
           return (
@@ -1564,8 +1547,8 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
                           {formatTanggal(b.start_date)} → {formatTanggal(b.end_date)} · {b.duration_days} hari
                         </p>
                         <div className="flex items-center justify-between mt-1">
-                          <p className="text-sm font-bold text-slate-900">{formatRupiah(Number(b.total_cost) + Number(b.late_fee || 0))}</p>
-                          {Number(b.late_fee || 0) > 0 && <span className="text-[10px] text-red-600 font-medium">Denda: {formatRupiah(Number(b.late_fee))}</span>}
+                          <p className="text-sm font-bold text-slate-900">{formatRupiah(Number(b.total_cost) + getTotalDenda(b))}</p>
+                          {getTotalDenda(b) > 0 && <span className="text-[10px] text-red-600 font-medium">Denda: {formatRupiah(getTotalDenda(b))}</span>}
                         </div>
                       </div>
                     ))
