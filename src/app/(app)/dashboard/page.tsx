@@ -18,16 +18,34 @@ export default async function DashboardPage() {
   const availableCars = cars.filter((c) => c.status === "available").length;
   const rentedCars = cars.filter((c) => c.status === "rented").length;
 
-  // Pendapatan bulan ini: sum total_cost + late_fee for paid bookings created this month
+  // Pendapatan bulan ini: disamakan dengan logika Laporan Bulanan
+  // - filter: start_date di bulan ini (tanpa cek payment_status)
+  // - sum: total_cost + late_fee + additional_fines (parsed dari JSON)
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const monthRevenue = bookings
-    .filter(
-      (b) =>
-        b.payment_status === "paid" &&
-        new Date(b.created_at) >= monthStart
-    )
-    .reduce((sum, b) => sum + (Number(b.total_cost) + Number(b.late_fee || 0)), 0);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+  function getTotalDenda(b: (typeof bookings)[number]): number {
+    let total = Number(b.late_fee || 0);
+    if (b.additional_fines) {
+      try {
+        const fines = JSON.parse(b.additional_fines) as { amount: number }[];
+        total += fines.reduce((s, f) => s + (f.amount || 0), 0);
+      } catch {
+        /* abaikan JSON rusak */
+      }
+    }
+    return total;
+  }
+
+  const monthRevenueBookings = bookings.filter((b) => {
+    const d = new Date(b.start_date);
+    return d >= monthStart && d < monthEnd;
+  });
+  const monthRevenue = monthRevenueBookings.reduce(
+    (sum, b) => sum + Number(b.total_cost) + getTotalDenda(b),
+    0
+  );
 
   // Active bookings (not yet returned)
   const activeBookings = bookings.filter((b) => !b.actual_return_date);
@@ -79,9 +97,7 @@ export default async function DashboardPage() {
           value={formatRupiah(monthRevenue)}
           icon="💰"
           tone="green"
-          hint={`Dari ${bookings.filter(
-            (b) => b.payment_status === "paid" && new Date(b.created_at) >= monthStart
-          ).length} transaksi lunas`}
+          hint={`Dari ${monthRevenueBookings.length} transaksi`}
         />
       </div>
 
