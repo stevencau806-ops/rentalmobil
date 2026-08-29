@@ -20,6 +20,23 @@ export function formatTanggal(iso: string | null | undefined): string {
   }).format(new Date(iso));
 }
 
+/**
+ * Ambil { month, year } dari sebuah ISO date string dengan timezone Asia/Jakarta (WIB).
+ * Penting: Date.prototype.getMonth() di Vercel server (UTC region) bisa beda dengan WIB.
+ * Pakai ini buat konsistensi filter bulan/tahun di semua halaman.
+ */
+export function getMonthYearInJakarta(iso: string): { month: number; year: number } {
+  const d = new Date(iso);
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Jakarta",
+    month: "numeric",
+    year: "numeric",
+  }).formatToParts(d);
+  const month = Number(parts.find((p) => p.type === "month")?.value ?? 0); // 1-12
+  const year = Number(parts.find((p) => p.type === "year")?.value ?? 0);
+  return { month: month - 1, year }; // month 0-11 (compatible dengan Date.getMonth)
+}
+
 /** Format an ISO date as dd MMM yyyy, HH:mm in WIB (+07).
  *  Handles date-only, datetime-local, +07:00, and UTC/Z inputs.
  */

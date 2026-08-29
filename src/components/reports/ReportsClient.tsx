@@ -16,6 +16,7 @@ import {
   paymentStatusLabel,
   expenseTypeLabel,
   expenseTypeIcon,
+  getMonthYearInJakarta,
 } from "@/lib/utils";
 
 interface ReportsClientProps {
@@ -33,14 +34,21 @@ const namaBulan = [
 
 export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) {
   const now = new Date();
+  const nowWib = getMonthYearInJakarta(now.toISOString());
   const [tab, setTab] = useState<Tab>("monthly");
-  const [month, setMonth] = useState(now.getMonth());
-  const [year, setYear] = useState(now.getFullYear());
+  const [month, setMonth] = useState(nowWib.month);
+  const [year, setYear] = useState(nowWib.year);
   const [detailBooking, setDetailBooking] = useState<Booking | null>(null);
   const [selectedCar, setSelectedCar] = useState<{ car: Car; bookings: Booking[]; showFull?: boolean } | null>(null);
   const [txPage, setTxPage] = useState(1);
   const [adminPage, setAdminPage] = useState(1);
   const ITEMS_PER_PAGE = 5;
+
+  // Helper: filter a list of { start_date } (Booking) by month/year in WIB
+  const inMonthYear = (iso: string, m: number, y: number) => {
+    const { month, year } = getMonthYearInJakarta(iso);
+    return month === m && year === y;
+  };
 
   // Helper: calculate total fines (late_fee + additional_fines) for a booking
   function getTotalDenda(b: Booking): number {
@@ -62,19 +70,13 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
   }, [bookings, expenses, now]);
 
   // ---- Monthly revenue ----
-  const monthBookings = bookings.filter((b) => {
-    const d = new Date(b.start_date);
-    return d.getMonth() === month && d.getFullYear() === year;
-  });
+  const monthBookings = bookings.filter((b) => inMonthYear(b.start_date, month, year));
   const monthRevenue = monthBookings.reduce(
     (s, b) => s + Number(b.total_cost) + getTotalDenda(b),
     0
   );
   const monthExpenses = expenses
-    .filter((e) => {
-      const d = new Date(e.date);
-      return d.getMonth() === month && d.getFullYear() === year;
-    })
+    .filter((e) => inMonthYear(e.date, month, year))
     .reduce((s, e) => s + Number(e.amount), 0);
   const monthProfit = monthRevenue - monthExpenses;
 
@@ -93,16 +95,10 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
   // Per-month breakdown for the year
   const monthlyBreakdown = Array.from({ length: 12 }, (_, m) => {
     const rev = bookings
-      .filter((b) => {
-        const d = new Date(b.start_date);
-        return d.getMonth() === m && d.getFullYear() === year;
-      })
+      .filter((b) => inMonthYear(b.start_date, m, year))
       .reduce((s, b) => s + Number(b.total_cost) + getTotalDenda(b), 0);
     const exp = expenses
-      .filter((e) => {
-        const d = new Date(e.date);
-        return d.getMonth() === m && d.getFullYear() === year;
-      })
+      .filter((e) => inMonthYear(e.date, m, year))
       .reduce((s, e) => s + Number(e.amount), 0);
     return { month: m, revenue: rev, expense: exp, profit: rev - exp };
   });
@@ -123,10 +119,7 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
   // From all bookings with car that has commission
   const commissionData = useMemo(() => {
     const monthCommissions = bookings
-      .filter((b) => {
-        const d = new Date(b.start_date);
-        return d.getMonth() === month && d.getFullYear() === year;
-      })
+      .filter((b) => inMonthYear(b.start_date, month, year))
       .map((b) => {
         const car = cars.find((c) => c.id === b.car_id);
         const percent = car?.commission_percent ?? 0;
@@ -249,12 +242,10 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
   // ---- Print per-car report in nota style ----
   function printCarReport(car: Car) {
     const carBookings = bookings.filter((b) => {
-      const d = new Date(b.start_date);
-      return b.car_id === car.id && d.getMonth() === month && d.getFullYear() === year;
+      return b.car_id === car.id && inMonthYear(b.start_date, month, year);
     });
     const carExpensesList = expenses.filter((e) => {
-      const d = new Date(e.date);
-      return e.car_id === car.id && d.getMonth() === month && d.getFullYear() === year;
+      return e.car_id === car.id && inMonthYear(e.date, month, year);
     });
     const carRevenue = carBookings.reduce((s, b) => s + Number(b.total_cost) + getTotalDenda(b), 0);
     const carExpensesTotal = carExpensesList.reduce((s, e) => s + Number(e.amount), 0);
@@ -1133,10 +1124,7 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
               const carBookings = monthBookings.filter((b) => b.car_id === car.id);
               const carRevenue = carBookings.reduce((s, b) => s + Number(b.total_cost) + getTotalDenda(b), 0);
               const carExpenses = expenses
-                .filter((e) => {
-                  const d = new Date(e.date);
-                  return e.car_id === car.id && d.getMonth() === month && d.getFullYear() === year;
-                })
+                .filter((e) => e.car_id === car.id && inMonthYear(e.date, month, year))
                 .reduce((s, e) => s + Number(e.amount), 0);
               // Commission calculation
               const commPercent = car.commission_percent ?? 0;
@@ -1444,10 +1432,9 @@ export function ReportsClient({ bookings, expenses, cars }: ReportsClientProps) 
       <Modal open={!!selectedCar} onClose={() => setSelectedCar(null)} title={selectedCar?.showFull ? "Detail Laporan Mobil" : "Riwayat Rental Mobil"} size="lg">
         {selectedCar && (() => {
           const { car, bookings: carBookings, showFull } = selectedCar;
-          const carExpensesList = expenses.filter((e) => {
-            const d = new Date(e.date);
-            return e.car_id === car.id && d.getMonth() === month && d.getFullYear() === year;
-          });
+          const carExpensesList = expenses.filter(
+            (e) => e.car_id === car.id && inMonthYear(e.date, month, year)
+          );
           const carRevenue = carBookings.reduce((s, b) => s + Number(b.total_cost) + getTotalDenda(b), 0);
           const carExpTotal = carExpensesList.reduce((s, e) => s + Number(e.amount), 0);
           const commPercent = car.commission_percent ?? 0;

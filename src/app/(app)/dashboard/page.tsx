@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getCars, getBookings } from "@/lib/queries";
-import { formatRupiah, formatTanggal } from "@/lib/utils";
+import { formatRupiah, formatTanggal, getMonthYearInJakarta } from "@/lib/utils";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -19,11 +19,13 @@ export default async function DashboardPage() {
   const rentedCars = cars.filter((c) => c.status === "rented").length;
 
   // Pendapatan bulan ini: disamakan dengan logika Laporan Bulanan
-  // - filter: start_date di bulan ini (tanpa cek payment_status)
+  // - filter: start_date di bulan ini, parse pakai timezone Asia/Jakarta (WIB) supaya konsisten
+  //   dengan halaman Laporan dan tidak terpengaruh region server Vercel (UTC).
   // - sum: total_cost + late_fee + additional_fines (parsed dari JSON)
   const now = new Date();
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
+  const nowWib = getMonthYearInJakarta(now.toISOString());
+  const currentMonth = nowWib.month;
+  const currentYear = nowWib.year;
 
   function getTotalDenda(b: (typeof bookings)[number]): number {
     let total = Number(b.late_fee || 0);
@@ -39,22 +41,8 @@ export default async function DashboardPage() {
   }
 
   const monthRevenueBookings = bookings.filter((b) => {
-    const d = new Date(b.start_date);
-    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-  });
-
-  // DEBUG: log untuk audit perbedaan dengan Laporan
-  console.log("[DASHBOARD-DEBUG] now:", now.toISOString(), "currentMonth:", currentMonth, "currentYear:", currentYear);
-  console.log("[DASHBOARD-DEBUG] total bookings:", bookings.length, "monthRevenueBookings:", monthRevenueBookings.length);
-  console.log("[DASHBOARD-DEBUG] boundary check (Aug 2026):");
-  bookings.forEach((b) => {
-    const d = new Date(b.start_date);
-    const m = d.getMonth();
-    const y = d.getFullYear();
-    const raw = b.start_date;
-    if ((m === 7 && y === 2026) || (m === 8 && y === 2026) || (m === 7 && y === 2026) || raw.includes("2026-08") || raw.includes("2026-09")) {
-      console.log(`  - id=${b.id.slice(0,8)} start_date=${raw} parsed=${d.toISOString()} m=${m} y=${y} included=${m === currentMonth && y === currentYear}`);
-    }
+    const { month, year } = getMonthYearInJakarta(b.start_date);
+    return month === currentMonth && year === currentYear;
   });
   const monthRevenue = monthRevenueBookings.reduce(
     (sum, b) => sum + Number(b.total_cost) + getTotalDenda(b),
