@@ -42,6 +42,20 @@ export default async function DashboardPage() {
     const d = new Date(b.start_date);
     return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
   });
+
+  // DEBUG: log untuk audit perbedaan dengan Laporan
+  console.log("[DASHBOARD-DEBUG] now:", now.toISOString(), "currentMonth:", currentMonth, "currentYear:", currentYear);
+  console.log("[DASHBOARD-DEBUG] total bookings:", bookings.length, "monthRevenueBookings:", monthRevenueBookings.length);
+  console.log("[DASHBOARD-DEBUG] boundary check (Aug 2026):");
+  bookings.forEach((b) => {
+    const d = new Date(b.start_date);
+    const m = d.getMonth();
+    const y = d.getFullYear();
+    const raw = b.start_date;
+    if ((m === 7 && y === 2026) || (m === 8 && y === 2026) || (m === 7 && y === 2026) || raw.includes("2026-08") || raw.includes("2026-09")) {
+      console.log(`  - id=${b.id.slice(0,8)} start_date=${raw} parsed=${d.toISOString()} m=${m} y=${y} included=${m === currentMonth && y === currentYear}`);
+    }
+  });
   const monthRevenue = monthRevenueBookings.reduce(
     (sum, b) => sum + Number(b.total_cost) + getTotalDenda(b),
     0
