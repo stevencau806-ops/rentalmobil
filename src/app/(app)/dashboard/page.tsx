@@ -22,8 +22,8 @@ export default async function DashboardPage() {
   // - filter: start_date di bulan ini (tanpa cek payment_status)
   // - sum: total_cost + late_fee + additional_fines (parsed dari JSON)
   const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
 
   function getTotalDenda(b: (typeof bookings)[number]): number {
     let total = Number(b.late_fee || 0);
@@ -40,7 +40,7 @@ export default async function DashboardPage() {
 
   const monthRevenueBookings = bookings.filter((b) => {
     const d = new Date(b.start_date);
-    return d >= monthStart && d < monthEnd;
+    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
   });
   const monthRevenue = monthRevenueBookings.reduce(
     (sum, b) => sum + Number(b.total_cost) + getTotalDenda(b),
