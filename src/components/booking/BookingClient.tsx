@@ -1,8 +1,8 @@
 ﻿"use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
-import { Trash2, TriangleAlert, Check, Printer, Plus, Eye, Search, X } from "lucide-react";
+import { Trash2, TriangleAlert, Check, Printer, Plus, Eye, Search, X, ChevronDown } from "lucide-react";
 import type { Booking, Car, Customer, AdditionalFine, FineType } from "@/lib/types";
 import { generateNotaPDF } from "@/lib/generate-nota-pdf";
 import { createClient } from "@/lib/supabase/client";
@@ -82,11 +82,6 @@ export function BookingClient({
     }
   }, [searchParams, customers]);
 
-  // Reset kolom pencarian pelanggan tiap kali modal booking dibuka
-  useEffect(() => {
-    if (newOpen) setCustomerSearch("");
-  }, [newOpen]);
-
   const [returnBooking, setReturnBooking] = useState<Booking | null>(null);
   const [returnForm, setReturnForm] = useState<ReturnForm>({ actual_return_date: "" });
   const [additionalFines, setAdditionalFines] = useState<AdditionalFine[]>([]);
@@ -101,7 +96,29 @@ export function BookingClient({
   const [deleting, setDeleting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [customerSearch, setCustomerSearch] = useState("");
+  const [customerOpen, setCustomerOpen] = useState(false);
+  const customerPickerRef = useRef<HTMLDivElement>(null);
   const toast = useToast();
+
+  // Reset pencarian & tutup dropdown pelanggan tiap kali modal booking dibuka
+  useEffect(() => {
+    if (newOpen) {
+      setCustomerSearch("");
+      setCustomerOpen(false);
+    }
+  }, [newOpen]);
+
+  // Tutup dropdown pelanggan saat klik di luar area
+  useEffect(() => {
+    if (!customerOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (customerPickerRef.current && !customerPickerRef.current.contains(e.target as Node)) {
+        setCustomerOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [customerOpen]);
 
   const availableCars = cars.filter((c) => c.status === "available");
 
@@ -116,6 +133,12 @@ export function BookingClient({
         (c.phone ?? "").toLowerCase().includes(q)
     );
   }, [customers, customerSearch]);
+
+  // Pelanggan yang sedang dipilih (ditampilkan di trigger dropdown)
+  const selectedCustomer = useMemo(
+    () => customers.find((c) => c.id === newForm.customer_id) ?? null,
+    [customers, newForm.customer_id]
+  );
 
   // Parse fine types from settings
   const DEFAULT_FINE_TYPES: FineType[] = [
@@ -706,81 +729,106 @@ export function BookingClient({
             </p>
           )}
 
-          {/* Pilih Pelanggan — pencarian + daftar (responsif mobile) */}
-          <div>
+          {/* Pilih Pelanggan — dropdown (ketutup dulu) dengan search di dalamnya */}
+          <div ref={customerPickerRef}>
             <span className="mb-1 block text-xs font-medium text-slate-700">
               Pilih Pelanggan <span className="text-red-500">*</span>
             </span>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <input
-                type="search"
-                value={customerSearch}
-                onChange={(e) => setCustomerSearch(e.target.value)}
-                placeholder="Cari nama, NIK, atau HP..."
-                inputMode="search"
-                autoComplete="off"
-                className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-9 pr-9 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600/20"
-              />
-              {customerSearch && (
-                <button
-                  type="button"
-                  onClick={() => setCustomerSearch("")}
-                  aria-label="Bersihkan pencarian"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
 
-            <ul className="mt-2 max-h-56 space-y-1 overflow-y-auto overscroll-contain rounded-lg border border-slate-200 bg-white p-1">
-              {filteredCustomers.length === 0 && (
-                <li className="px-3 py-3 text-center text-xs text-slate-400">
-                  Tidak ada pelanggan cocok dengan &ldquo;{customerSearch}&rdquo;.
-                </li>
-              )}
-              {filteredCustomers.map((c) => {
-                const bl = blacklistNiks.includes(c.nik);
-                const selected = newForm.customer_id === c.id;
-                return (
-                  <li key={c.id}>
-                    <button
-                      type="button"
-                      onClick={() => setNewForm((prev) => ({ ...prev, customer_id: c.id }))}
-                      className={`flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors ${
-                        selected
-                          ? "bg-brand-50 text-brand-800 ring-1 ring-brand-200"
-                          : "text-slate-700 hover:bg-slate-50"
-                      }`}
-                    >
-                      <span className="min-w-0">
-                        <span className="block truncate font-medium">{c.name}</span>
-                        <span className="block truncate text-xs text-slate-500">
-                          NIK {c.nik}
-                          {c.phone ? ` · ${c.phone}` : ""}
-                        </span>
-                      </span>
-                      <span className="flex shrink-0 items-center gap-1">
-                        {bl && (
-                          <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">
-                            BLACKLIST
+            {/* Trigger (mirip select) */}
+            <button
+              type="button"
+              onClick={() => setCustomerOpen((o) => !o)}
+              aria-haspopup="listbox"
+              aria-expanded={customerOpen}
+              className="flex w-full items-center justify-between gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-left text-sm focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600/20"
+            >
+              <span className={`truncate ${selectedCustomer ? "text-slate-900" : "text-slate-400"}`}>
+                {selectedCustomer
+                  ? `${selectedCustomer.name} · ${selectedCustomer.nik}`
+                  : "— Pilih pelanggan —"}
+              </span>
+              <ChevronDown
+                className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${customerOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+
+            {/* Panel dropdown */}
+            {customerOpen && (
+              <div className="mt-1 rounded-lg border border-slate-200 bg-white shadow-lg">
+                <div className="border-b border-slate-100 p-2">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="search"
+                      value={customerSearch}
+                      onChange={(e) => setCustomerSearch(e.target.value)}
+                      placeholder="Cari nama, NIK, atau HP..."
+                      inputMode="search"
+                      autoComplete="off"
+                      autoFocus
+                      className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-9 pr-9 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600/20"
+                    />
+                    {customerSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setCustomerSearch("")}
+                        aria-label="Bersihkan pencarian"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <ul role="listbox" className="max-h-56 space-y-1 overflow-y-auto overscroll-contain p-1">
+                  {filteredCustomers.length === 0 && (
+                    <li className="px-3 py-3 text-center text-xs text-slate-400">
+                      Tidak ada pelanggan cocok dengan &ldquo;{customerSearch}&rdquo;.
+                    </li>
+                  )}
+                  {filteredCustomers.map((c) => {
+                    const bl = blacklistNiks.includes(c.nik);
+                    const selected = newForm.customer_id === c.id;
+                    return (
+                      <li key={c.id}>
+                        <button
+                          type="button"
+                          role="option"
+                          aria-selected={selected}
+                          onClick={() => {
+                            setNewForm((prev) => ({ ...prev, customer_id: c.id }));
+                            setCustomerOpen(false);
+                            setCustomerSearch("");
+                          }}
+                          className={`flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors ${
+                            selected
+                              ? "bg-brand-50 text-brand-800"
+                              : "text-slate-700 hover:bg-slate-50"
+                          }`}
+                        >
+                          <span className="min-w-0">
+                            <span className="block truncate font-medium">{c.name}</span>
+                            <span className="block truncate text-xs text-slate-500">
+                              NIK {c.nik}
+                              {c.phone ? ` · ${c.phone}` : ""}
+                            </span>
                           </span>
-                        )}
-                        {selected && <Check className="h-4 w-4 text-brand-600" />}
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-            {newForm.customer_id && (
-              <p className="mt-1 text-xs text-slate-500">
-                Terpilih:{" "}
-                <span className="font-medium text-slate-700">
-                  {customers.find((c) => c.id === newForm.customer_id)?.name}
-                </span>
-              </p>
+                          <span className="flex shrink-0 items-center gap-1">
+                            {bl && (
+                              <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">
+                                BLACKLIST
+                              </span>
+                            )}
+                            {selected && <Check className="h-4 w-4 text-brand-600" />}
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
             )}
           </div>
           {selectedCustomerBlacklisted && (
